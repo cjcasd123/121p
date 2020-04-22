@@ -437,6 +437,7 @@ void p_appc_proc_data(u8 *bData, u8 bLength)
 #endif 
 		// 熄屏
 	case 0x07:
+		g_isS2Sleep = 1;
 		//g_isS2CommSleep = 1;
 		//PrintString1("ComSleep\r\n");
 		// 回复
@@ -444,6 +445,7 @@ void p_appc_proc_data(u8 *bData, u8 bLength)
 		break;
 		// 亮屏
 	case 0x08:
+		g_isS2Sleep = 0;
 		//g_isS2CommSleep = 0;
 		//PrintString1("ComWake\r\n");
 		// 回复
@@ -565,36 +567,46 @@ void pUart_Send_Pro(void)
 	//定时发送  --- 心跳包
 	else if ((g_bPlusTimeOut1s == 0)/*||(g_isCommErr)*/)
 	{
-		g_bSendNum++;
-		//PrintString1("Send Plus\r\n");
+		// 设备未睡眠 --- 一直发送心跳包
+		if (g_isS2Sleep == 0) 
+		{
+			g_bSendNum++;
+			//PrintString1("Send Plus\r\n");
 #if 0
-		if (g_bPowerUpTimeOut1s > 0)
-		{
-			g_bPlusTimeOut1s = 2;
-		}
+			if (g_bPowerUpTimeOut1s > 0)
+			{
+				g_bPlusTimeOut1s = 2;
+			}
 #endif
-		//else if (g_isCommErr)
-		if (g_isCommErr)
-		{
-			g_bPlusTimeOut1s = 60;
-		}
-		else
-		{
-			g_bPlusTimeOut1s = 2;
-		}
-		bTxBuf[0] = 0xff;
-		bTxBuf[1] = 0xaa;
-		bTxBuf[2] = g_bSendNum;
-		bTxBuf[3] = 0x01;
-		bTxBuf[4] = 0x01;	//cmd
-		bTxBuf[5] = 0;
+#if 0
+			//else if (g_isCommErr)
+			if (g_isCommErr)
+			{
+				g_bPlusTimeOut1s = 60;
+			}
+			else
+			{
+				g_bPlusTimeOut1s = 2;
+			}
+#endif
+			g_bPlusTimeOut1s = 200;
 
-		bTxLen = bTxBuf[5] + 7;
-		bTxBuf[6] = pSum(bTxBuf, bTxLen);
-		TX2_send_data(bTxBuf, bTxLen);
-		COM2.TX_TimeOut = 50;
-		g_isCommWait = 1;		//等待回复
-	}
+			bTxBuf[0] = 0xff;
+			bTxBuf[1] = 0xaa;
+			bTxBuf[2] = g_bSendNum;
+			bTxBuf[3] = 0x01;
+			bTxBuf[4] = 0x01;	//cmd
+			bTxBuf[5] = 0;
+
+			bTxLen = bTxBuf[5] + 7;
+			bTxBuf[6] = pSum(bTxBuf, bTxLen);
+			TX2_send_data(bTxBuf, bTxLen);
+			COM2.TX_TimeOut = 50;
+			g_isCommWait = 1;		//等待回复
+		}
+		
+		}
+
 }
 
 

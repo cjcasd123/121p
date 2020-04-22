@@ -43,7 +43,7 @@ void ResetPara(void)
 	g_isS2Sleep = 0;   // 不睡眠
 	/*  */
 	bFreeTimeOut1s = 5;
-	g_bPlusTimeOut1s = 2;
+	g_bPlusTimeOut1s = 200;
 	/* 按键值初始化 */
 	g_bKey[0] = 0;
 	g_bKey[1] = 0;
@@ -125,16 +125,12 @@ void main(void)
 			// IO口初始化
 		}
 #endif
-
 #if 0
 		if (sign_date == 5)
 		{
-			//P1M1 |= (1 << 7);
-			//P1M0 |= (1 << 7);
-			//usb_boot = 0;
 			P1M1 |= (1 << 7);
-			P1M0 &= ~(1 << 7);
-			IO_LED_RUN = ~IO_LED_RUN;
+			P1M0 |= (1 << 7);
+			usb_boot = ~usb_boot;
 			IO_LED_SOS = ~IO_LED_SOS;
 			sign_date = 0;
 		}
@@ -144,8 +140,8 @@ void main(void)
 		// 关机和运行 --- 没有执行任务则是睡眠
 		//else
 		//if (g_isS2Sleep == 1)   // 这里修改了
-		if (g_isS2Sleep == 0)
-		{
+		//if (g_isS2Sleep == 0)
+		//{
 			if ((g_bKey[0] == 0x86) || (g_bKey[1] == 0x86))
 			{
 				g_isS2Off = 1;
@@ -183,9 +179,6 @@ void main(void)
 				//	WDT_CONTR |= WDT_CLR;
 				//	iEvent_Flag |= EVENT_TIMER_100MS;
 			}
-  
-
-
 #if 0
 			//20毫秒定时处理	
 			if (iEvent_Flag & EVENT_TIMER_100MS)
@@ -222,7 +215,7 @@ void main(void)
 #endif
 			/* 接收发送 */
 			pUart_Pro();
-		}
+		//}
 	}
 }
 
@@ -284,7 +277,7 @@ void TM0_Isr() interrupt 1 using 3
 				{
 					g_bPlusTimeOut1s--;
 				}
-				// 暂时不用
+				// 暂时不用(可以作为超时的判断)
 				if (g_bSleepTimeOut1s > 0)
 				{
 					bFreeTimeOut1s = 5;
