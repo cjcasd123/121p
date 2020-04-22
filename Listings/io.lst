@@ -1,0 +1,385 @@
+C51 COMPILER V9.54   IO                                                                    04/22/2020 19:13:37 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE IO
+OBJECT MODULE PLACED IN .\Objects\io.obj
+COMPILER INVOKED BY: D:\keil5 mdk\C51\BIN\C51.EXE user\src\io.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\lib;.\user\inc) DEBUG 
+                    -OBJECTEXTEND PRINT(.\Listings\io.lst) TABS(2) OBJECT(.\Objects\io.obj)
+
+line level    source
+
+   1          #include "Config.h"
+   2          
+   3          // ¿ªÂ©Êä³ö£º PXM1 H   PXM0 H   // ÄÚ²¿ÉÏÀ­¶Ï¿ª £­£­Ê¡µç
+   4          // ¸ß×èÊäÈë£º PXM1 H   PXM0 L   // µçÁ÷¼È²»Á÷Èë£¬Ò²²»Á÷³ö£¡£­£­Ê¡µç
+   5          // ÉÏÀ­Ë«Ïò£º PXM1 L   PXM0 L   // ÈõÉÏÀ­£¬¹àµçÁ÷¿É´ï20mA£¬À­µçÁ÷270uA 
+   6          // ÍÆÍìÊä³ö£º PXM1 L   PXM0 H   // ¿É´ï20mA£¬Ðè¼ÓÏÞÁ÷µç×è£»£¨Ð¾Æ¬ÕûÌåÁ÷Èë/Á÷³öµçÁ÷²»³¬¹ý90mA£©
+   7          
+   8          
+   9          // µçÔ´
+  10          //u8 xdata g_bPower;
+  11          //u8 xdata iPWR_In;
+  12          // LED
+  13          u8 xdata g_bLedRun, g_bLedSOS, g_bLedLamp, g_bLedCd;
+  14          //u8 xdata g_bLedRunBak, g_bLedQjBak, g_bLedLampBak;
+  15          bit g_isLedBak;
+  16          bit isFlash, isFlashFast;
+  17          
+  18          
+  19          
+  20          /* ¸ù¾Ý±äÁ¿Êµ¼ÊÖ´ÐÐIO¿ÚµÄµÆ */
+  21          void pLedRun()    
+  22          {
+  23   1      
+  24   1        //ÔËÐÐµÆ
+  25   1        switch (g_bLedRun)
+  26   1        {
+  27   2        case LED_OFF:
+  28   2          IO_LED_RUN = OFF_LED;
+  29   2          break;
+  30   2        case LED_ON:
+  31   2          IO_LED_RUN = ON_LED;
+  32   2          break;
+  33   2        case LED_FLASH_FAST:
+  34   2          IO_LED_RUN = isFlashFast;
+  35   2          break;
+  36   2        case LED_FLASH:
+  37   2          IO_LED_RUN = isFlash;
+  38   2          break;
+  39   2        default:
+  40   2          break;
+  41   2        }
+  42   1      
+  43   1        //Çó¾È
+  44   1        switch (g_bLedSOS)
+  45   1        {
+  46   2        case LED_OFF:
+  47   2          IO_LED_SOS = OFF_LED;
+  48   2          break;
+  49   2        case LED_ON:
+  50   2          IO_LED_SOS = ON_LED;
+  51   2          break;
+  52   2        case LED_FLASH_FAST:
+  53   2          IO_LED_SOS = isFlashFast;
+  54   2          break;
+C51 COMPILER V9.54   IO                                                                    04/22/2020 19:13:37 PAGE 2   
+
+  55   2        case LED_FLASH:
+  56   2          IO_LED_SOS = isFlash;
+  57   2          break;
+  58   2        default:
+  59   2          break;
+  60   2        }
+  61   1      #if 0
+                //³äµçµÆ
+                switch (iPWR_In)
+                {
+                case 0:
+                  g_bLedCd = LED_OFF;
+                  break;
+                case 1:
+                  g_bLedCd = LED_FLASH;
+                  break;
+                case 2:
+                  g_bLedCd = LED_ON;
+                  break;
+                }
+              
+                //ÕÕÃ÷µÆ
+                switch (g_bLedLamp)
+                {
+                case LED_OFF:
+                  IO_LED_LAMP1 = OFF_LED;
+                  IO_LED_LAMP2 = OFF_LED;
+                  break;
+                case LED_ON:
+                  IO_LED_LAMP1 = ON_LED;
+                  IO_LED_LAMP2 = ON_LED;
+                  break;
+                case LED_FLASH_FAST:
+                  IO_LED_LAMP1 = isFlashFast;
+                  IO_LED_LAMP2 = isFlashFast;
+                  break;
+                case LED_FLASH:
+                  IO_LED_LAMP1 = isFlash;
+                  IO_LED_LAMP2 = isFlash;
+                  break;
+                default:
+                  break;
+                }
+              
+                //³äµçÖ¸Ê¾µÆ
+                switch (g_bLedCd)
+                {
+                case LED_OFF:
+                  IO_LED_PWRIN = OFF_LED;
+                  break;
+                case LED_ON:
+                  IO_LED_PWRIN = ON_LED;
+                  break;
+                case LED_FLASH_FAST:
+                  IO_LED_PWRIN = isFlashFast;
+                  break;
+                case LED_FLASH:
+                  IO_LED_PWRIN = isFlash;
+                  break;
+                default:
+                  break;
+                }
+C51 COMPILER V9.54   IO                                                                    04/22/2020 19:13:37 PAGE 3   
+
+              #endif
+ 118   1      }
+ 119          
+ 120          #if 0
+              /* ÉèÖÃÖ¸Ê¾µÆµÄ²ÎÊýÁ¿ */
+              void LED_pro(void)  
+              {
+                static u8 bLastTime;
+                static bit isUpFlash;
+              
+              
+                // Õâ¸öÊÇÔÝÊ±µÄ£¡£¡£¡£¡£¡
+                u8 g_bPowerUpTimeOut1s, g_bPowerDownTimeOut1s;
+                //¿ª»úÖ¸Ê¾µÆÉèÖÃ
+                if (g_bPowerUpTimeOut1s > 0)
+                {
+                  if (bLastTime != g_bPowerUpTimeOut1s)
+                  {
+                    isUpFlash = !isUpFlash;
+              
+                    if (isUpFlash)
+                    {
+                      g_bLedRun = LED_ON;
+                      g_bLedSOS = LED_OFF;
+                      g_bLedLamp = LED_OFF;
+                    }
+                    else
+                    {
+                      g_bLedRun = LED_OFF;
+                      g_bLedSOS = LED_ON;
+                      g_bLedLamp = LED_OFF;
+                    }
+              
+                    bLastTime = g_bPowerUpTimeOut1s;
+                  }
+                }
+              
+                //¹Ø»úÖ¸Ê¾µÆÉèÖÃ£¨×¼±¸¹Ø±Õ£©
+                else if (g_bPowerDownTimeOut1s > 0)
+                {
+                  g_bLedRun = LED_ON;
+                  g_bLedSOS = LED_ON;
+                  g_bLedLamp = LED_OFF;
+                }
+              
+                //¹Ø»úÔòÈ«²¿Ö¸Ê¾µÆÃð£¨ÕæµÄ¹Ø±Õ£©
+                else if (g_isS2Sleep)
+                {
+                  g_bLedRun = LED_OFF;
+                  g_bLedSOS = LED_OFF;
+                  g_bLedLamp = LED_OFF;
+                }
+                else       // Éè±¸ÔËÐÐÊ±µÄÌáÊ¾µÆ
+                {
+                  //Í¨Ñ¶¹ÊÕÏ£¨±£´æÊý¾Ý²¢È«µÆÃð£©
+                  if (g_isCommErr)
+                  {
+                    //Í¨Ñ¶¹ÊÕÏÐèÒª±¸·ÝLED×´Ì¬
+                    if (!g_isLedBak)
+                    {
+                      g_isLedBak = 1;
+                      g_bLedRunBak = g_bLedRun;
+C51 COMPILER V9.54   IO                                                                    04/22/2020 19:13:37 PAGE 4   
+
+                      g_bLedLampBak = g_bLedLamp;
+                      g_bLedQjBak = g_bLedSOS;
+                    }
+                    g_bLedRun = LED_OFF;
+                    g_bLedLamp = LED_OFF;
+                    g_bLedSOS = LED_OFF;
+                    //IO_PA_SHAN = 0;
+                  }
+                  // Õý³£Í¨Ñ¶£¨È«µÆÁÁ£©
+                  else
+                  {
+                    if (g_isLedBak)
+                    {
+                      g_isLedBak = 0;
+                      g_bLedRun = g_bLedRunBak;
+                      g_bLedLamp = g_bLedLampBak;
+                      g_bLedSOS = g_bLedQjBak;
+                    }
+                  }
+                }
+              
+                pLedRun();
+              
+              }
+              #endif
+ 204          /* IO¿Ú³õÊ¼»¯ */
+ 205          void IO_Init(void)  // Ò»°ãÄ¬ÈÏÊÇ×¼Ë«ÏòµÄ¹ÊÏÖÔÚ²»½øÐÐÐÞ¸Ä   ---- ¶øÇÒÌØ±ð×¢Òâusb_boot¹Ü½Å£¨Õâ¸öÊÇÒ»¶¨Îª¿ªÂ
+             -©À­µÍ£¡£¡£¡£¡£¡£©
+ 206          {
+ 207   1        //Î´Ê¹ÓÃ¹Ü½Å£¬£­£­×¼Ë«Ïò£¬Ê¡µç
+ 208   1        P0M0 = P0M1 = 0;
+ 209   1        P1M0 = P1M1 = 0;
+ 210   1        P2M0 = P2M1 = 0;
+ 211   1        P3M0 = P3M1 = 0;
+ 212   1        P4M0 = P4M1 = 0;
+ 213   1      
+ 214   1        //LED¿ØÖÆ¹Ü½Å³õÊ¼»¯--×¼Ë«Ïò
+ 215   1        P3M1 &= ~(1 << 4);      // ÔËÐÐ
+ 216   1        P3M0 &= ~(1 << 4);
+ 217   1        P3M1 &= ~(1 << 5);      // Çó¾È
+ 218   1        P3M0 &= ~(1 << 5);
+ 219   1      
+ 220   1      //  P2M1 &= ~(1 << 1);      // ³äµç
+ 221   1      //  P2M0 &= ~(1 << 1);
+ 222   1      
+ 223   1        // ÊÖµçÍ²£ºÍÆÍìºÍË«ÏòÎÞ²î±ð£»
+ 224   1      //  P2M1 &= ~((1 << 2) | (1 << 3));
+ 225   1      //  P2M0 &= ~((1 << 2) | (1 << 3));
+ 226   1      
+ 227   1        //KEY¹Ü½Å³õÊ¼»¯P3.2/3--×¼Ë«Ïò 
+ 228   1        P3M1 &= ~((1 << 2) | (1 << 3));
+ 229   1        P3M0 &= ~((1 << 2) | (1 << 3));
+ 230   1      //  P1M1 &= ~((1 << 2) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6));
+ 231   1      //  P1M0 &= ~((1 << 2) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6));
+ 232   1      
+ 233   1      #if 0
+                // ³äµç¼ì²â--¸ß×è 
+                P2M1 |= (1 << 4);
+                P2M0 &= ~(1 << 4);
+                IO_DECT_AC = 0;
+                // ³äÂú¼ì²â--¸ß×è
+                P3M1 |= (1 << 7);
+C51 COMPILER V9.54   IO                                                                    04/22/2020 19:13:37 PAGE 5   
+
+                P3M0 &= ~(1 << 7);
+                IO_DECT_CHG = 0;
+                // ¹¦·ÅÊ¹ÄÜ--ÍÆÍì
+                P0M1 &= ~(1 << 2);
+                P0M0 |= (1 << 2);
+                IO_PA_SHAN = 0;     // µÍ½ûÖ¹£¬Âö³åÊ¹ÄÜ
+              #endif
+ 247   1      
+ 248   1      }
+ 249          
+ 250          
+ 251          /* IOÊ¡µç´¦Àí */
+ 252          void GPIO_SavePower(void)
+ 253          {
+ 254   1        //GSM_READY = 0;            // S2Êµ²âÎÞÐ§¹Ü½Å£¡£¡£¡´®½Óµç×è¶Ï¿ª£¡
+ 255   1        //GSM_PWRKEY = 1;           // À­µÍ¿ª»ú 
+ 256   1        //GSM_RESET = 1;            // µÍµçÆ½ > 31.25ms ¸´Î»
+ 257   1      
+ 258   1      
+ 259   1        // ³äµç¼ì²â--¸ß×è 
+ 260   1        //IO_DECT_AC = 0;
+ 261   1        // ³äÂú¼ì²â--¸ß×è
+ 262   1        //IO_DECT_CHG = 0;
+ 263   1        //IO_PA_SHAN = 0;     // µÍ½ûÖ¹£¬Âö³åÊ¹ÄÜ
+ 264   1      
+ 265   1        g_bLedRun = LED_OFF;
+ 266   1        g_bLedCd = LED_OFF;
+ 267   1        g_bLedLamp = LED_OFF;
+ 268   1        g_bLedSOS = LED_OFF;
+ 269   1        IO_LED_RUN = OFF_LED;   // ÔËÐÐÖ¸Ê¾
+ 270   1        IO_LED_SOS = OFF_LED;   // Çó¾ÈÖ¸Ê¾
+ 271   1      #if 0
+                IO_LED_PWRIN = OFF_LED;   // ³äµçÖ¸Ê¾
+                IO_LED_LAMP1 = OFF_LED;   // ÊÖµçÍ²
+                IO_LED_LAMP2 = OFF_LED;
+              #endif
+ 276   1      }
+ 277          
+ 278          #if 0
+              /* ³äµç¼ì²â */
+              void Check_AC_In(void)
+              {
+                // ³äµç¶Ï¿ª¼ì²â¡¢³äÂú¼ì²â
+                if (bAC_In) {
+                  IO_DECT_AC = 1;
+                  if (!IO_DECT_AC) {    // ¸ßµçÆ½³äµç
+                    iDect_AC_Count++;
+                    if (iDect_AC_Count >= 3) {
+                      iDect_AC_Count = 0;
+                      bAC_In = 0;
+              
+                      iPWR_In = 0;
+                      PrintString1("CHG OUT");
+                      g_bPower = '0';
+                    }
+                  }
+              
+                  // ³äÂú¼ì²â
+                  if (bDect_Chg) {
+                    IO_DECT_CHG = 0;
+                    if (!IO_DECT_CHG) {
+                      iDect_Bat_Count++;
+C51 COMPILER V9.54   IO                                                                    04/22/2020 19:13:37 PAGE 6   
+
+                      if (iDect_Bat_Count >= 3)
+                      {
+                        iDect_Bat_Count = 0;
+                        bDect_Chg = 0;
+                        if (iPWR_In == 2)
+                        {
+                          iPWR_In = 1;    //×ªÎª¼ÌÐø³äµç×´Ì¬
+                        }
+              
+                      }
+              
+                    }
+              
+                  }
+                  else {
+                    IO_DECT_CHG = 1;
+                    if (IO_DECT_CHG) {
+                      iDect_Bat_Count++;
+                      if (iDect_Bat_Count >= 3)
+                      {
+                        iDect_Bat_Count = 0;
+                        bDect_Chg = 1;
+                        iPWR_In = 2;
+                        PrintString1("BAT Full");
+                        g_bPower = '2';
+                      }
+              
+                    }
+                  }
+                  // ³äµç¼ì²â 
+                }
+                else {
+                  IO_DECT_AC = 0;
+                  if (IO_DECT_AC) {   // ¸ßµçÆ½³äµç
+                    iDect_AC_Count++;
+                    if (iDect_AC_Count >= 3) {
+                      iDect_AC_Count = 0;
+                      bAC_In = 1;
+                      iPWR_In = 1;
+                      PrintString1("CHG INSER");
+                      g_bPower = '1';
+                    }
+                  }
+                }
+              }
+              #endif
+ 348          
+ 349          
+ 350          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    130    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      4    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      3    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

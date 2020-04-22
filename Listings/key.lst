@@ -1,0 +1,143 @@
+C51 COMPILER V9.54   KEY                                                                   04/22/2020 19:13:37 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE KEY
+OBJECT MODULE PLACED IN .\Objects\key.obj
+COMPILER INVOKED BY: D:\keil5 mdk\C51\BIN\C51.EXE user\src\key.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\lib;.\user\inc) DEBUG
+                    - OBJECTEXTEND PRINT(.\Listings\key.lst) TABS(2) OBJECT(.\Objects\key.obj)
+
+line level    source
+
+   1          #include "Config.h"
+   2          
+   3          
+   4          u8 sign_date;
+   5          u8 xdata g_bKey[2] = { 0,0 }; //最多存储2个按键缓冲
+   6          u8 xdata bKeyTimeOut1s;
+   7          /*  定时器(20MS进入一次) -- 发送 --第几个按键被按下  -- 属于常按还是短按 */
+   8          void pAddKey(u8 bWhich, bit isTouch)
+   9          {
+  10   1        static u8 xdata bKeyCnt[6];
+  11   1      
+  12   1        u8 bPos;
+  13   1      
+  14   1        //第2个按键可以被更新，有可能关机键
+  15   1        if (g_bKey[0] != 0)
+  16   1        {
+  17   2          bPos = 1;
+  18   2        }
+  19   1        else
+  20   1        {
+  21   2          bPos = 0;
+  22   2        }
+  23   1      
+  24   1        if (isTouch)
+  25   1        {
+  26   2          bFreeTimeOut1s = 5;
+  27   2          /* 这里做一个按键按下时间的测试 */
+  28   2          if (bKeyCnt[bWhich] < 0xff)
+  29   2          {
+  30   3            bKeyCnt[bWhich]++;
+  31   3          }
+  32   2      
+  33   2          //长按2s
+  34   2          if (bKeyCnt[bWhich] == 100)
+  35   2          {
+  36   3      
+  37   3            sign_date = 5;
+  38   3      
+  39   3            g_bKey[bPos] = 0x81 + bWhich;
+  40   3      
+  41   3            //TX1_write2buff('0' + bPos);
+  42   3            //PrintString1("L_KEY:");
+  43   3      
+  44   3            //TX1_write2buff(bWhich + '0');
+  45   3      
+  46   3            bKeyTimeOut1s = 5;  //5s抛弃
+  47   3          }
+  48   2        }
+  49   1        else   // 不按了即为高电平
+  50   1        {
+  51   2          //短按（大于，小于2S）
+  52   2          if ((bKeyCnt[bWhich] > 2) && (bKeyCnt[bWhich] < 100))
+  53   2          {
+  54   3      
+C51 COMPILER V9.54   KEY                                                                   04/22/2020 19:13:37 PAGE 2   
+
+  55   3      
+  56   3            sign_date = 5;
+  57   3            g_bKey[bPos] = 0x01 + bWhich;
+  58   3      
+  59   3            //TX1_write2buff('0' + bPos);
+  60   3            //PrintString1("KEY:");
+  61   3            //TX1_write2buff(bWhich + '0');
+  62   3            bKeyTimeOut1s = 5;  //5s抛弃
+  63   3          }
+  64   2          bKeyCnt[bWhich] = 0;   // 清空
+  65   2        }
+  66   1      }
+  67          
+  68          
+  69          /* 识别是否有按键被按下 ---返回为1即是进入睡眠  */
+  70          bit pSleepAble(void)
+  71          {
+  72   1        if (bFreeTimeOut1s > 0)
+  73   1        {
+  74   2          return 0;
+  75   2        }
+  76   1      
+  77   1        if ((KEY1 == 0))
+  78   1        {
+  79   2          bFreeTimeOut1s = 5;
+  80   2          return 0;
+  81   2        }
+  82   1      
+  83   1        if ((KEY2 == 0))
+  84   1        {
+  85   2          bFreeTimeOut1s = 5;
+  86   2          return 0;
+  87   2        }
+  88   1      #if 0
+                if ((KEY3 == 0))
+                {
+                  bFreeTimeOut1s = 5;
+                  return 0;
+                }
+                if ((KEY4 == 0))
+                {
+                  bFreeTimeOut1s = 5;
+                  return 0;
+                }
+                if ((KEY5 == 0))
+                {
+                  bFreeTimeOut1s = 5;
+                  return 0;
+                }
+                if ((KEY6 == 0))
+                {
+                  bFreeTimeOut1s = 5;
+                  return 0;
+                }
+              
+              #endif
+ 111   1        return 1;
+ 112   1      }
+ 113          
+ 114          
+ 115          
+
+C51 COMPILER V9.54   KEY                                                                   04/22/2020 19:13:37 PAGE 3   
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    170    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      9    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      1    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

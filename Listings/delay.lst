@@ -1,0 +1,105 @@
+C51 COMPILER V9.54   DELAY                                                                 04/22/2020 19:13:35 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE DELAY
+OBJECT MODULE PLACED IN .\Objects\delay.obj
+COMPILER INVOKED BY: D:\keil5 mdk\C51\BIN\C51.EXE user\src\delay.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\lib;.\user\inc) DEB
+                    -UG OBJECTEXTEND PRINT(.\Listings\delay.lst) TABS(2) OBJECT(.\Objects\delay.obj)
+
+line level    source
+
+   1          #include "delay.h"
+   2           
+   3          volatile unsigned long g_time_ms;
+   4          
+   5          // g_time_ms(这个需要进行修改)
+   6          void Delay_nms(uint32_t ms)
+   7          {
+   8   1        ms += my_time();
+   9   1        while (ms > my_time());
+  10   1      }
+  11          void Delay_100ms(uint8_t iCnt)
+  12          {
+  13   1        while (iCnt--)
+  14   1        {
+  15   2          Delay_nms(100);
+  16   2        }
+  17   1      }
+  18          
+  19          
+  20          #if 0
+              void Delay_nms(uint8_t iCnt)
+              {
+                uint16_t i = 0;
+              
+                do {  // 20191106:实测11.0592M，14000偏差太大，10000差不多；    
+                  i = FOSC / 10000;     // 14T per loop ＝ 14 ×0.0904us(11.0592M) ＝ 1.2659us
+                  while (--i);          // 14T per loop ＝ 14 ×0.0452us(22.1184M) ＝ 0.6328us  
+                } while (--iCnt);
+              }
+              void Delay_100ms(uint8 iCnt)
+              {
+                while (iCnt--)
+                {
+                  Delay_nms(100);
+                }
+              }
+              #endif
+  38          
+  39          
+  40          /*  这里是系统时钟（晶振）12MHZ */
+  41          void p_sysclk_init(void)
+  42          {
+  43   1        /*选择内部24MHz高精度IRC*/
+  44   1        P_SW2 = 0x80;
+  45   1        CKSEL = 0x00;                               //选择内部IRC ( 默认 )
+  46   1        CLKDIV = 0x02;                // 2分频 24MHz/2 = 12Mhz
+  47   1        P_SW2 = 0x00;
+  48   1      }
+  49          
+  50          /* 1ms 十六位自动重载 12T */
+  51          void p_timer_init(void)
+  52          {
+  53   1        /* Timer0 初始化 时间戳10ms */
+  54   1        AUXR &= 0x7F;   // 定时器时钟12T模式
+C51 COMPILER V9.54   DELAY                                                                 04/22/2020 19:13:35 PAGE 2   
+
+  55   1        TMOD &= 0xF0;   // 设置定时器模式
+  56   1        TL0 = 0x18;     // 设置定时初值
+  57   1        TH0 = 0xfc;     // 设置定时初值
+  58   1        TF0 = 0;      // 清除TF0标志
+  59   1        TR0 = 1;      // 定时器0开始计时
+  60   1      
+  61   1        /* 使能定时器中断 */
+  62   1        ET0 = 1;                     // 使能定时器0中断
+  63   1        enableExtiInterrupts();
+  64   1      }
+  65          
+  66          
+  67          
+  68          
+  69          
+  70          
+  71          
+  72          
+  73          
+  74          
+  75          
+  76          
+  77          
+  78          
+  79          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    115    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4       5
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
