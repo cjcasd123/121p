@@ -38,10 +38,13 @@ bit g_isS2On, g_isS2Off, g_isS2Reset;
 //开机参数
 void ResetPara(void)
 {
-	g_isCommErr = 1;
-	g_isS2Sleep = 0;
+	/* 通信和是否睡眠 */
+	g_isCommErr = 1;   // 不通信
+	g_isS2Sleep = 0;   // 不睡眠
+	/*  */
 	bFreeTimeOut1s = 5;
 	g_bPlusTimeOut1s = 2;
+	/* 按键值初始化 */
 	g_bKey[0] = 0;
 	g_bKey[1] = 0;
 }
@@ -309,7 +312,7 @@ void TM0_Isr() interrupt 1 using 3
 
 			}
 		}
-		//LED_pro();    // 20MS查询一次灯
+		LED_pro();    // 20MS查询一次灯
 	}
 
 }

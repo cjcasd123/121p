@@ -117,6 +117,24 @@ void pLedRun()
 #endif
 }
 
+void LED_pro(void)
+{
+	if (g_isS2Sleep == 0)
+	{
+		/* 开机常亮且还没进行通信  */
+		if (g_isCommErr == 1)
+			g_bLedRun = 1;   
+        // 当为0时进行频闪
+	}
+	/* 息屏时关灯 */
+	else
+	{
+		g_bLedSOS = 0;
+		g_bLedRun = 0;
+	}
+	pLedRun();
+}
+
 #if 0
 /* 设置指示灯的参数量 */
 void LED_pro(void)  
