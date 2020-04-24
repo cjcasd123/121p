@@ -3,12 +3,12 @@
 bit g_isCommWait, g_isCommErr, g_isCommTry;
 u8 g_bCommErrTimeOut01s;
 u8 g_bSendNum;
-
-#if 0
+u8 uart_sign, uart_num;   // 对于两个包
+//#if 0
 COMx_Define	 xdata COM1;
 u8	 xdata TX1_Buffer[COM_TX1_Lenth];	//发送缓冲
 u8 	 xdata RX1_Buffer[COM_RX1_Lenth];	//接收缓冲
-#endif 
+//#endif 
 COMx_Define	 xdata COM2;
 u8	xdata TX2_Buffer[COM_TX2_Lenth];	//发送缓冲
 u8 	xdata RX2_Buffer[COM_RX2_Lenth];	//接收缓冲
@@ -16,7 +16,7 @@ u8 	xdata RX2_Buffer[COM_RX2_Lenth];	//接收缓冲
 static u8 xdata bTxLen;
 static u8 xdata bTxBuf[20];
 
-#if 0
+//#if 0
 void p_uart1_init()
 {
 	SCON = 0x50;		                      // 8位数据，可变波特率
@@ -28,10 +28,24 @@ void p_uart1_init()
 	TR1 = 1;		                          // 启动定时器1
 	enableUart1Interrupts();
 	//enableExtiInterrupts();
+	IP |= 0X10;   // 改变优先级
 	memset(&COM1, 0, sizeof(COM1));
 }
 
 
+void p_uart2_init(void)
+{
+	/* 开串口2 */
+	S2CON = 0x50;		                      // 8位数据，可变波特率
+	AUXR |= 0x04;		                      // 定时器2时钟1为FOSC,即1T
+	T2L = (65536 - (FOSC / 4 / BAUD));        // 设置定时初值 这里设置12为晶振
+	T2H = (65536 - (FOSC / 4 / BAUD)) >> 8;   // 设置定时初值
+	AUXR |= 0x10;		                      // 启动定时器2	      	
+	enableUart2Interrupts();
+	IP2 |= 0x01;
+	IP2H |= 0x01;
+	memset(&COM2, 0, sizeof(COM2));
+}
 
 void TX1_write2buff(u8 dat)	//写入发送缓冲，指针+1
 {
@@ -46,30 +60,28 @@ void TX1_write2buff(u8 dat)	//写入发送缓冲，指针+1
 	}
 }
 
+void TX1_send_data(u8 *payload_dat, u16 payload_len)
+{
+	u16 i = 0;
+	for (i = 0; i < payload_len; i++)
+	{
+		TX1_write2buff(payload_dat[i]);
+	}
+}
+
 
 void PrintString1(u8 *put)
 {
 	while ((*put) != '\0')
 	{
-		//TX1_write2buff(*put);
+		TX1_write2buff(*put);
 		put++;
 	}
 }
 
-#endif
+//#endif
 
 
-void p_uart2_init(void)
-{
-	/* 开串口2 */
-	S2CON = 0x50;		                      // 8位数据，可变波特率
-	AUXR |= 0x04;		                      // 定时器2时钟1为FOSC,即1T
-	T2L = (65536 - (FOSC / 4 / BAUD));        // 设置定时初值 这里设置12为晶振
-	T2H = (65536 - (FOSC / 4 / BAUD)) >> 8;   // 设置定时初值
-	AUXR |= 0x10;		                      // 启动定时器2	      	
-	enableUart2Interrupts();
-	memset(&COM2, 0, sizeof(COM2));
-}
 
 void TX2_send_data(u8 *payload_dat, u16 payload_len)
 {
@@ -86,7 +98,8 @@ void TX2_send_data(u8 *payload_dat, u16 payload_len)
 void TX2_write2buff(u8 dat)	//写入发送缓冲，指针+1
 {
 	TX2_Buffer[COM2.TX_write] = dat;	//装发送缓冲
-	if (++COM2.TX_write >= COM_TX2_Lenth)	COM2.TX_write = 0;
+	if (++COM2.TX_write >= COM_TX2_Lenth)	
+		COM2.TX_write = 0;
 
 	if (COM2.B_TX_busy == 0)		//空闲
 	{
@@ -97,7 +110,7 @@ void TX2_write2buff(u8 dat)	//写入发送缓冲，指针+1
 }
 
 
-#if 0
+//#if 0
 void Uart1() interrupt 4 using 1
 {
 	if (RI)
@@ -128,7 +141,7 @@ void Uart1() interrupt 4 using 1
 	}
 
 }
-#endif 
+//#endif 
 
 /* 串口2中断  <--> GSM/LTE */
 void Uart2() interrupt 8 using 1
@@ -136,33 +149,31 @@ void Uart2() interrupt 8 using 1
 	//if (RI2)
 	if (S2CON & 0x01)
 	{
-		bFreeTimeOut1s = 5;
+//		bFreeTimeOut1s = 5;
 
 		//CLR_RI2();
 		S2CON &= ~0x01;
-		if (COM2.B_RX_OK == 0)
-		{
-			if (COM2.RX_Cnt >= COM_RX2_Lenth)	COM2.RX_Cnt = 0;
+		//if (COM2.B_RX_OK == 0)
+	//	{
+			if (COM2.RX_Cnt >= COM_RX2_Lenth)	
+				COM2.RX_Cnt = 0;
 			RX2_Buffer[COM2.RX_Cnt] = S2BUF;
-
-			// 打印串口2接收的数据
-			//TX1_write2buff(RX2_Buffer[COM2.RX_Cnt]);
 			COM2.RX_Cnt++;
 			COM2.RX_TimeOut = TimeOutSet2;
 
-			//判断一下接收头
+			//判断一下接收头(防止开头)
 			if ((RX2_Buffer[0] != 0xff) || ((COM2.RX_Cnt > 1) && (RX2_Buffer[1] != 0xaa)))
 			{
 				COM2.RX_Cnt = 0;
 			}
 
-		}
+		//}
 	}
 
 	//if (TI2)
     if (S2CON & 0x02)
 	{
-		bFreeTimeOut1s = 5;
+	//	bFreeTimeOut1s = 5;
 
 		//CLR_TI2();
 		S2CON &= ~0x02;
@@ -243,12 +254,21 @@ void pUart_Pro(void)
 	{
 		if (COM2.RX_Cnt > 0)
 		{
-			COM2.B_RX_OK = 1;
-
+		//	COM2.B_RX_OK = 1;
+			TX1_send_data(RX2_Buffer, COM2.RX_Cnt);
+			//p_appc_proc_data(&RX2_Buffer, COM2.RX_Cnt);
 			p_appc_proc_data(&RX2_Buffer, COM2.RX_Cnt);
-
+			// 这里再放一个
+			if (uart_sign == 5)
+			{
+				p_appc_proc_data(&RX2_Buffer, uart_num);
+				uart_sign = 0;
+			}
+			TX1_send_data(RX2_Buffer, COM2.RX_Cnt);
+			memset(RX2_Buffer, 0, COM2.RX_Cnt);
 			COM2.RX_Cnt = 0;
-			COM2.B_RX_OK = 0;
+		//	COM2.B_RX_OK = 0;
+			
 		}
 
 	}
@@ -334,9 +354,9 @@ void pUartReturn(u8 *bData, u8 bLen)
 {
 	u8 xdata bRTxBuf[20];
 	memcpy(bRTxBuf, bData, bLen);
-	bRTxBuf[3] |= 0x80;   // 功能高位置1
-	//bRTxBuf[4] |= 0x80;   
-	bRTxBuf[4] &= 0x0f;   // 功能高位置0
+	bRTxBuf[3] |= 0x80;   // 返回高位置1
+	bRTxBuf[4] |= 0x80;   // 功能高位置1
+	//bRTxBuf[4] &= 0x0f;   // 功能高位置0
 	bRTxBuf[bLen - 1] = pSum(bRTxBuf, bLen);
 	TX2_send_data(bRTxBuf, bLen);
 
@@ -351,19 +371,20 @@ void p_appc_proc_data(u8 *bData, u8 bLength)
 	{
 		return;
 	}
-
+	TX1_write2buff(0xaa);
 	//校验长度
 	bLen = bData[5] + 7;
 	if (bLen > bLength)
 	{
 		return;
 	}
+	TX1_write2buff(0xbb);
 	//校验
 	if (bData[bLen - 1] != pSum(bData, bLen))
 	{
 		return;
 	}
-
+	TX1_write2buff(0xcc);
 	g_isCommErr = 0;	 		//通讯正常
 	g_bCommErrTimeOut01s = 0;
 	switch (bData[4])
@@ -372,7 +393,8 @@ void p_appc_proc_data(u8 *bData, u8 bLength)
 	  /* 回复(发送心跳和按键的回复值) */
 	case 0x81:
 	case 0x82:
-	/* 充电状态的回复 */
+      /* 充电状态的回复 */
+#if 0
 	case 0x83:
 		if (bData[2] == g_bSendNum)
 		{
@@ -383,7 +405,7 @@ void p_appc_proc_data(u8 *bData, u8 bLength)
 			//PrintString1("Rcv Ok\r\n");
 		}
 		break;
-		
+#endif 	
       /*  解析  */
 		//功放控制
 #if 0 	
@@ -405,14 +427,16 @@ void p_appc_proc_data(u8 *bData, u8 bLength)
 		//灯控制
 	//case 0x05:
 	case 0x06:
+		PrintString1("OK5\r\n");
 		//PrintString1("LED Ctrl");
-		for (i = 0; i < 3; i++)
+		// 设置两个灯的状态
+		for (i = 0; i < 2; i++)
 		{
 			//TX1_write2buff(bData[6 + i] + '0');
 			LED_Control(i + '1', bData[6 + i] + '0');
 		}
 		//PrintString1("\r\n");
-		g_isLedBak = 0;
+		//g_isLedBak = 0;
 		// 回复
 		pUartReturn(bData, bLen);
 		break;
@@ -437,17 +461,24 @@ void p_appc_proc_data(u8 *bData, u8 bLength)
 #endif 
 		// 熄屏
 	case 0x07:
-		g_isS2Sleep = 1;
-		//g_isS2CommSleep = 1;
-		//PrintString1("ComSleep\r\n");
+		/* 设备进入睡眠并将灯关闭和设备通讯关闭 */
+		g_isS2Sleep = 1; 
+		g_isCommErr = 1;
+		// 灯全亮
 		// 回复
 		pUartReturn(bData, bLen);
+		memset(RX2_Buffer, 0x00, bLen);
+		if (bLength > bLen)
+		{
+			memcpy(&RX2_Buffer[0], &RX2_Buffer[bLen], bLength - bLen);
+			uart_num = bLength - bLen;
+			uart_sign = 5;
+		}
+
 		break;
 		// 亮屏
 	case 0x08:
 		g_isS2Sleep = 0;
-		//g_isS2CommSleep = 0;
-		//PrintString1("ComWake\r\n");
 		// 回复
 		pUartReturn(bData, bLen);
 		break;
@@ -589,7 +620,7 @@ void pUart_Send_Pro(void)
 				g_bPlusTimeOut1s = 2;
 			}
 #endif
-			g_bPlusTimeOut1s = 200;
+			g_bPlusTimeOut1s = 120;
 
 			bTxBuf[0] = 0xff;
 			bTxBuf[1] = 0xaa;

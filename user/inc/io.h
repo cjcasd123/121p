@@ -24,7 +24,7 @@ sbit IO_LED_LAMP2 = P2 ^ 3;
 //LED
 extern u8 xdata g_bLedRun, g_bLedSOS, g_bLedLamp, g_bLedCd;
 extern bit isFlash, isFlashFast;
-extern bit g_isLedBak;
+//extern bit g_isLedBak;
 //---------------------------------------------------------------------
 //LED
 enum
@@ -45,5 +45,6 @@ void IO_Init(void);
 void Check_AC_In(void);						
 void LED_pro(void);
 void GPIO_SavePower(void);
+void pLedRun(void);
 #endif
 

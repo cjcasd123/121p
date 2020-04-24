@@ -12,13 +12,13 @@
 // LED
 u8 xdata g_bLedRun, g_bLedSOS, g_bLedLamp, g_bLedCd;
 //u8 xdata g_bLedRunBak, g_bLedQjBak, g_bLedLampBak;
-bit g_isLedBak;
+//bit g_isLedBak;
 bit isFlash, isFlashFast;
 
 
 
 /* 根据变量实际执行IO口的灯 */
-void pLedRun()    
+void pLedRun(void)    
 {
 
 	//运行灯
@@ -119,6 +119,7 @@ void pLedRun()
 
 void LED_pro(void)
 {
+#if 0
 	if (g_isS2Sleep == 0)
 	{
 		/* 开机常亮且还没进行通信  */
@@ -132,6 +133,7 @@ void LED_pro(void)
 		g_bLedSOS = 0;
 		g_bLedRun = 0;
 	}
+#endif
 	pLedRun();
 }
 

@@ -9,8 +9,8 @@ void pAddKey(u8 bWhich, bit isTouch)
 {
 	static u8 xdata bKeyCnt[6];
 
-	u8 bPos;
-
+	u8 bPos = 0;
+#if 0
 	//第2个按键可以被更新，有可能关机键
 	if (g_bKey[0] != 0)
 	{
@@ -20,48 +20,40 @@ void pAddKey(u8 bWhich, bit isTouch)
 	{
 		bPos = 0;
 	}
-
+#endif
 	if (isTouch)
 	{
 		bFreeTimeOut1s = 5;
-		/* 这里做一个按键按下时间的测试 */
+		/* 累加按键按下的时间 */
 		if (bKeyCnt[bWhich] < 0xff)
 		{
 			bKeyCnt[bWhich]++;
 		}
 
-		//长按2s
+		//长按2s   --- 20*100 = 2S
 		if (bKeyCnt[bWhich] == 100)
 		{
-
-			sign_date = 5;
-
+			//sign_date = 5;
 			g_bKey[bPos] = 0x81 + bWhich;
-
 			//TX1_write2buff('0' + bPos);
 			//PrintString1("L_KEY:");
-
 			//TX1_write2buff(bWhich + '0');
-
 			bKeyTimeOut1s = 5;	//5s抛弃
 		}
 	}
 	else   // 不按了即为高电平
 	{
-		//短按（大于，小于2S）
+		//短按（大于40MS，小于2S）
 		if ((bKeyCnt[bWhich] > 2) && (bKeyCnt[bWhich] < 100))
 		{
-
-
-			sign_date = 5;
+			//sign_date = 5;
 			g_bKey[bPos] = 0x01 + bWhich;
-
 			//TX1_write2buff('0' + bPos);
 			//PrintString1("KEY:");
 			//TX1_write2buff(bWhich + '0');
 			bKeyTimeOut1s = 5;	//5s抛弃
 		}
-		bKeyCnt[bWhich] = 0;   // 清空
+		bKeyCnt[bWhich] = 0;   // 清空计算按键的时间
 	}
 }
 

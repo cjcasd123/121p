@@ -5,11 +5,11 @@
 #define FOSC 12000000
 #define BAUD 9600
 
-#define	COM_TX1_Lenth		100
-#define	COM_RX1_Lenth		100
+#define	COM_TX1_Lenth		50
+#define	COM_RX1_Lenth		50
 
 #define	COM_TX2_Lenth		50		
-#define	COM_RX2_Lenth		50
+#define	COM_RX2_Lenth		100
 
 
 typedef struct
@@ -26,11 +26,11 @@ typedef struct
 	u8	B_RX_OK;		//接收块完成
 } COMx_Define;
 
-#if 0
+//#if 0
 extern	COMx_Define	 xdata COM1;
 extern	u8 xdata	 TX1_Buffer[COM_TX1_Lenth];	//发送缓冲
 extern	u8 xdata 	 RX1_Buffer[COM_RX1_Lenth];	//接收缓冲
-#endif
+//#endif
 extern	COMx_Define	 xdata COM2;
 extern	u8	xdata TX2_Buffer[COM_TX2_Lenth];	//发送缓冲
 extern	u8 	xdata RX2_Buffer[COM_RX2_Lenth];	//接收缓冲
@@ -39,12 +39,12 @@ extern bit g_isCommWait, g_isCommErr, g_isCommTry;
 extern u8 g_bCommErrTimeOut01s;
 extern u8 g_bSendNum;
 
-#if 0
+//#if 0
 void p_uart1_init(void);
-//void TX1_send_data(u8 *payload_dat, u16 payload_len);
+void TX1_send_data(u8 *payload_dat, u16 payload_len);
 void TX1_write2buff(u8 dat);	//写入发送缓冲，指针+1
 void PrintString1(u8 *put);
-#endif
+//#endif
 void p_uart2_init(void);
 void TX2_send_data(u8 *payload_dat, u16 payload_len);
 void TX2_write2buff(u8 dat);	//写入发送缓冲，指针+1

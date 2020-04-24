@@ -2,6 +2,7 @@
 ".\Objects\main.obj",
 ".\Objects\io.obj",
 ".\Objects\key.obj",
-".\Objects\usart.obj" 
+".\Objects\usart.obj",
+".\Objects\gsm.obj" 
 TO ".\Objects\main" 
 PRINT(".\Listings\main.m51") RAMSIZE(256) 

@@ -408,6 +408,11 @@
               <FileType>5</FileType>
               <FilePath>.\user\inc\usart.h</FilePath>
             </File>
+            <File>
+              <FileName>gsm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\inc\gsm.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -437,6 +442,11 @@
               <FileName>usart.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\user\src\usart.c</FilePath>
+            </File>
+            <File>
+              <FileName>gsm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\src\gsm.c</FilePath>
             </File>
           </Files>
         </Group>

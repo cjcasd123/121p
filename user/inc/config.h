@@ -17,6 +17,7 @@
 //#include "PR_Key.h"
 #include "key.h"
 #include "delay.h"
+#include "gsm.h"
 /* 前两种是数据类型的转换（int -- ASILL） 后几种可以认为是对数据进行的解析判断  （将函数转换成宏定义来写）  */
 #define CUSTOM_ITOA_3(val, p) do {\
 									(p)[2] = ((val) % 10)+'0'; (val) /= 10; \

@@ -25,7 +25,7 @@ extern u8  iDect_AC_Count;
 extern u8  iDect_Bat_Count;
 
 extern u8  g_bPlusTimeOut1s;
-extern u8  bFreeTimeOut1s;
+//extern u8  bFreeTimeOut1s;
 
 
 

@@ -45,11 +45,12 @@ typedef unsigned long	   u32;
 #define TRUE		1
 #define FALSE		0
 #define	TimeOutSet1		5
-#define	TimeOutSet2		2
-#define COM1_RX_Lenth	64
-#define COM1_TX_Lenth	64	
-#define COM2_RX_Lenth	64
-#define COM2_TX_Lenth	64
+//#define	TimeOutSet2		300
+#define	TimeOutSet2		200
+//#define COM1_RX_Lenth	64
+//#define COM1_TX_Lenth	64	
+//#define COM2_RX_Lenth	64
+//#define COM2_TX_Lenth	64
 
 #define my_time()			g_time_ms     // 设置时间轴的定义
 

@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 1   
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE USART
@@ -13,12 +13,12 @@ line level    source
    3          bit g_isCommWait, g_isCommErr, g_isCommTry;
    4          u8 g_bCommErrTimeOut01s;
    5          u8 g_bSendNum;
-   6          
-   7          #if 0
-              COMx_Define  xdata COM1;
-              u8   xdata TX1_Buffer[COM_TX1_Lenth]; //发送缓冲
-              u8   xdata RX1_Buffer[COM_RX1_Lenth]; //接收缓冲
-              #endif 
+   6          u8 uart_sign, uart_num;   // 对于两个包
+   7          //#if 0
+   8          COMx_Define  xdata COM1;
+   9          u8   xdata TX1_Buffer[COM_TX1_Lenth]; //发送缓冲
+  10          u8   xdata RX1_Buffer[COM_RX1_Lenth]; //接收缓冲
+  11          //#endif 
   12          COMx_Define  xdata COM2;
   13          u8  xdata TX2_Buffer[COM_TX2_Lenth];  //发送缓冲
   14          u8  xdata RX2_Buffer[COM_RX2_Lenth];  //接收缓冲
@@ -26,184 +26,195 @@ line level    source
   16          static u8 xdata bTxLen;
   17          static u8 xdata bTxBuf[20];
   18          
-  19          #if 0
-              void p_uart1_init()
-              {
-                SCON = 0x50;                          // 8位数据，可变波特率
-                AUXR |= 0x40;                         // 定时器1时钟1为FOSC,即1T
-                AUXR &= 0xFE;                         // 串口1选择定时器1为波特率发生器
-                TMOD &= 0x0F;                         // 设定定时器1工作模式0 为16位自动重装方式
-                TL1 = (65536 - (FOSC / 4 / BAUD));        // 设置定时初值 这里设置12为晶振
-                TH1 = (65536 - (FOSC / 4 / BAUD)) >> 8;   // 设置定时初值                            
-                TR1 = 1;                              // 启动定时器1
-                enableUart1Interrupts();
-                //enableExtiInterrupts();
-                memset(&COM1, 0, sizeof(COM1));
-              }
-              
-              
-              
-              void TX1_write2buff(u8 dat) //写入发送缓冲，指针+1
-              {
-                TX1_Buffer[COM1.TX_write] = dat;  //装发送缓冲
-                if (++COM1.TX_write >= COM_TX1_Lenth)
-                  COM1.TX_write = 0;
-              
-                if (COM1.B_TX_busy == 0)    //空闲
-                {
-                  COM1.B_TX_busy = 1;   //标志忙
-                  TI = 1;         //触发发送中断
-                }
-              }
-              
-              
-              void PrintString1(u8 *put)
-              {
-                while ((*put) != '\0')
-                {
-                  //TX1_write2buff(*put);
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 2   
+  19          //#if 0
+  20          void p_uart1_init()
+  21          {
+  22   1        SCON = 0x50;                          // 8位数据，可变波特率
+  23   1        AUXR |= 0x40;                         // 定时器1时钟1为FOSC,即1T
+  24   1        AUXR &= 0xFE;                         // 串口1选择定时器1为波特率发生器
+  25   1        TMOD &= 0x0F;                         // 设定定时器1工作模式0 为16位自动重装方式
+  26   1        TL1 = (65536 - (FOSC / 4 / BAUD));        // 设置定时初值 这里设置12为晶振
+  27   1        TH1 = (65536 - (FOSC / 4 / BAUD)) >> 8;   // 设置定时初值                            
+  28   1        TR1 = 1;                              // 启动定时器1
+  29   1        enableUart1Interrupts();
+  30   1        //enableExtiInterrupts();
+  31   1        IP |= 0X10;   // 改变优先级
+  32   1        memset(&COM1, 0, sizeof(COM1));
+  33   1      }
+  34          
+  35          
+  36          void p_uart2_init(void)
+  37          {
+  38   1        /* 开串口2 */
+  39   1        S2CON = 0x50;                         // 8位数据，可变波特率
+  40   1        AUXR |= 0x04;                         // 定时器2时钟1为FOSC,即1T
+  41   1        T2L = (65536 - (FOSC / 4 / BAUD));        // 设置定时初值 这里设置12为晶振
+  42   1        T2H = (65536 - (FOSC / 4 / BAUD)) >> 8;   // 设置定时初值
+  43   1        AUXR |= 0x10;                         // 启动定时器2          
+  44   1        enableUart2Interrupts();
+  45   1        IP2 |= 0x01;
+  46   1        IP2H |= 0x01;
+  47   1        memset(&COM2, 0, sizeof(COM2));
+  48   1      }
+  49          
+  50          void TX1_write2buff(u8 dat) //写入发送缓冲，指针+1
+  51          {
+  52   1        TX1_Buffer[COM1.TX_write] = dat;  //装发送缓冲
+  53   1        if (++COM1.TX_write >= COM_TX1_Lenth)
+  54   1          COM1.TX_write = 0;
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 2   
 
-                  put++;
-                }
-              }
-              
-              #endif
-  60          
-  61          
-  62          void p_uart2_init(void)
-  63          {
-  64   1        /* 开串口2 */
-  65   1        S2CON = 0x50;                         // 8位数据，可变波特率
-  66   1        AUXR |= 0x04;                         // 定时器2时钟1为FOSC,即1T
-  67   1        T2L = (65536 - (FOSC / 4 / BAUD));        // 设置定时初值 这里设置12为晶振
-  68   1        T2H = (65536 - (FOSC / 4 / BAUD)) >> 8;   // 设置定时初值
-  69   1        AUXR |= 0x10;                         // 启动定时器2          
-  70   1        enableUart2Interrupts();
-  71   1        memset(&COM2, 0, sizeof(COM2));
-  72   1      }
-  73          
-  74          void TX2_send_data(u8 *payload_dat, u16 payload_len)
-  75          {
-  76   1        u16 i = 0;
-  77   1        for (i = 0; i < payload_len; i++)
-  78   1        {
-  79   2          TX2_write2buff(payload_dat[i]);
-  80   2      
-  81   2          //发送也打印
-  82   2          //TX1_write2buff(payload_dat[i]);
-  83   2        }
-  84   1      }
+  55   1      
+  56   1        if (COM1.B_TX_busy == 0)    //空闲
+  57   1        {
+  58   2          COM1.B_TX_busy = 1;   //标志忙
+  59   2          TI = 1;         //触发发送中断
+  60   2        }
+  61   1      }
+  62          
+  63          void TX1_send_data(u8 *payload_dat, u16 payload_len)
+  64          {
+  65   1        u16 i = 0;
+  66   1        for (i = 0; i < payload_len; i++)
+  67   1        {
+  68   2          TX1_write2buff(payload_dat[i]);
+  69   2        }
+  70   1      }
+  71          
+  72          
+  73          void PrintString1(u8 *put)
+  74          {
+  75   1        while ((*put) != '\0')
+  76   1        {
+  77   2          TX1_write2buff(*put);
+  78   2          put++;
+  79   2        }
+  80   1      }
+  81          
+  82          //#endif
+  83          
+  84          
   85          
-  86          void TX2_write2buff(u8 dat) //写入发送缓冲，指针+1
+  86          void TX2_send_data(u8 *payload_dat, u16 payload_len)
   87          {
-  88   1        TX2_Buffer[COM2.TX_write] = dat;  //装发送缓冲
-  89   1        if (++COM2.TX_write >= COM_TX2_Lenth) COM2.TX_write = 0;
-  90   1      
-  91   1        if (COM2.B_TX_busy == 0)    //空闲
-  92   1        {
-  93   2          COM2.B_TX_busy = 1;   //标志忙
-  94   2          //SET_TI2();        //触发发送中断
-  95   2          S2CON |= (1 << 1);
-  96   2        }
-  97   1      }
-  98          
-  99          
- 100          #if 0
-              void Uart1() interrupt 4 using 1
-              {
-                if (RI)
-                {
-                  RI = 0;
-                  if (COM1.B_RX_OK == 0)
-                  {
-                    if (COM1.RX_Cnt >= COM_RX1_Lenth)
-                      COM1.RX_Cnt = 0;
-                    RX1_Buffer[COM1.RX_Cnt] = SBUF;
-                    //透传  --- 用于电脑和通讯模块进行通信
-                    //TX2_write2buff(RX1_Buffer[COM1.RX_Cnt]);
-                    COM1.RX_Cnt++;
-                    COM1.RX_TimeOut = TimeOutSet1;
-                  }
-                }
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 3   
+  88   1        u16 i = 0;
+  89   1        for (i = 0; i < payload_len; i++)
+  90   1        {
+  91   2          TX2_write2buff(payload_dat[i]);
+  92   2      
+  93   2          //发送也打印
+  94   2          //TX1_write2buff(payload_dat[i]);
+  95   2        }
+  96   1      }
+  97          
+  98          void TX2_write2buff(u8 dat) //写入发送缓冲，指针+1
+  99          {
+ 100   1        TX2_Buffer[COM2.TX_write] = dat;  //装发送缓冲
+ 101   1        if (++COM2.TX_write >= COM_TX2_Lenth) 
+ 102   1          COM2.TX_write = 0;
+ 103   1      
+ 104   1        if (COM2.B_TX_busy == 0)    //空闲
+ 105   1        {
+ 106   2          COM2.B_TX_busy = 1;   //标志忙
+ 107   2          //SET_TI2();        //触发发送中断
+ 108   2          S2CON |= (1 << 1);
+ 109   2        }
+ 110   1      }
+ 111          
+ 112          
+ 113          //#if 0
+ 114          void Uart1() interrupt 4 using 1
+ 115          {
+ 116   1        if (RI)
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 3   
 
-              
-                if (TI)
-                {
-                  TI = 0;
-                  if (COM1.TX_read != COM1.TX_write)
-                  {
-                    SBUF = TX1_Buffer[COM1.TX_read];
-                    if (++COM1.TX_read >= COM_TX1_Lenth)
-                      COM1.TX_read = 0;
-                  }
-                  else  COM1.B_TX_busy = 0;
-                }
-              
-              }
-              #endif 
- 132          
- 133          /* 串口2中断  <--> GSM/LTE */
- 134          void Uart2() interrupt 8 using 1
- 135          {
- 136   1        //if (RI2)
- 137   1        if (S2CON & 0x01)
- 138   1        {
- 139   2          bFreeTimeOut1s = 5;
- 140   2      
- 141   2          //CLR_RI2();
- 142   2          S2CON &= ~0x01;
- 143   2          if (COM2.B_RX_OK == 0)
- 144   2          {
- 145   3            if (COM2.RX_Cnt >= COM_RX2_Lenth) COM2.RX_Cnt = 0;
- 146   3            RX2_Buffer[COM2.RX_Cnt] = S2BUF;
- 147   3      
- 148   3            // 打印串口2接收的数据
- 149   3            //TX1_write2buff(RX2_Buffer[COM2.RX_Cnt]);
- 150   3            COM2.RX_Cnt++;
- 151   3            COM2.RX_TimeOut = TimeOutSet2;
- 152   3      
- 153   3            //判断一下接收头
- 154   3            if ((RX2_Buffer[0] != 0xff) || ((COM2.RX_Cnt > 1) && (RX2_Buffer[1] != 0xaa)))
- 155   3            {
- 156   4              COM2.RX_Cnt = 0;
- 157   4            }
- 158   3      
- 159   3          }
- 160   2        }
- 161   1      
- 162   1        //if (TI2)
- 163   1          if (S2CON & 0x02)
- 164   1        {
- 165   2          bFreeTimeOut1s = 5;
- 166   2      
- 167   2          //CLR_TI2();
- 168   2          S2CON &= ~0x02;
- 169   2          if (COM2.TX_read != COM2.TX_write)
- 170   2          {
- 171   3            S2BUF = TX2_Buffer[COM2.TX_read];
- 172   3            if (++COM2.TX_read >= COM_TX2_Lenth)    COM2.TX_read = 0;
- 173   3          }
- 174   2          else
- 175   2          {
- 176   3            COM2.B_TX_busy = 0;
- 177   3          }
- 178   2        }
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 4   
+ 117   1        {
+ 118   2          RI = 0;
+ 119   2          if (COM1.B_RX_OK == 0)
+ 120   2          {
+ 121   3            if (COM1.RX_Cnt >= COM_RX1_Lenth)
+ 122   3              COM1.RX_Cnt = 0;
+ 123   3            RX1_Buffer[COM1.RX_Cnt] = SBUF;
+ 124   3            //透传  --- 用于电脑和通讯模块进行通信
+ 125   3            //TX2_write2buff(RX1_Buffer[COM1.RX_Cnt]);
+ 126   3            COM1.RX_Cnt++;
+ 127   3            COM1.RX_TimeOut = TimeOutSet1;
+ 128   3          }
+ 129   2        }
+ 130   1      
+ 131   1        if (TI)
+ 132   1        {
+ 133   2          TI = 0;
+ 134   2          if (COM1.TX_read != COM1.TX_write)
+ 135   2          {
+ 136   3            SBUF = TX1_Buffer[COM1.TX_read];
+ 137   3            if (++COM1.TX_read >= COM_TX1_Lenth)
+ 138   3              COM1.TX_read = 0;
+ 139   3          }
+ 140   2          else  COM1.B_TX_busy = 0;
+ 141   2        }
+ 142   1      
+ 143   1      }
+ 144          //#endif 
+ 145          
+ 146          /* 串口2中断  <--> GSM/LTE */
+ 147          void Uart2() interrupt 8 using 1
+ 148          {
+ 149   1        //if (RI2)
+ 150   1        if (S2CON & 0x01)
+ 151   1        {
+ 152   2          bFreeTimeOut1s = 5;
+ 153   2      
+ 154   2          //CLR_RI2();
+ 155   2          S2CON &= ~0x01;
+ 156   2          //if (COM2.B_RX_OK == 0)
+ 157   2        //  {
+ 158   2            if (COM2.RX_Cnt >= COM_RX2_Lenth) 
+ 159   2              COM2.RX_Cnt = 0;
+ 160   2            RX2_Buffer[COM2.RX_Cnt] = S2BUF;
+ 161   2            COM2.RX_Cnt++;
+ 162   2            COM2.RX_TimeOut = TimeOutSet2;
+ 163   2      
+ 164   2            //判断一下接收头(防止开头)
+ 165   2            if ((RX2_Buffer[0] != 0xff) || ((COM2.RX_Cnt > 1) && (RX2_Buffer[1] != 0xaa)))
+ 166   2            {
+ 167   3              COM2.RX_Cnt = 0;
+ 168   3            }
+ 169   2      
+ 170   2          //}
+ 171   2        }
+ 172   1      
+ 173   1        //if (TI2)
+ 174   1          if (S2CON & 0x02)
+ 175   1        {
+ 176   2          bFreeTimeOut1s = 5;
+ 177   2      
+ 178   2          //CLR_TI2();
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 4   
 
- 179   1      
- 180   1      }
- 181          
- 182          /* 接收发送一体函数 */
- 183          void pUart_Pro(void)
- 184          {
- 185   1        //  static u8 bTrySend = 0;
- 186   1      
- 187   1          //发送数据
- 188   1        if (COM2.TX_TimeOut == 0)
- 189   1        {
- 190   2      #if 0
+ 179   2          S2CON &= ~0x02;
+ 180   2          if (COM2.TX_read != COM2.TX_write)
+ 181   2          {
+ 182   3            S2BUF = TX2_Buffer[COM2.TX_read];
+ 183   3            if (++COM2.TX_read >= COM_TX2_Lenth)    COM2.TX_read = 0;
+ 184   3          }
+ 185   2          else
+ 186   2          {
+ 187   3            COM2.B_TX_busy = 0;
+ 188   3          }
+ 189   2        }
+ 190   1      
+ 191   1      }
+ 192          
+ 193          /* 接收发送一体函数 */
+ 194          void pUart_Pro(void)
+ 195          {
+ 196   1        //  static u8 bTrySend = 0;
+ 197   1      
+ 198   1          //发送数据
+ 199   1        if (COM2.TX_TimeOut == 0)
+ 200   1        {
+ 201   2      #if 0
                   if (g_isCommWait)
                   {
                     //心跳2次不正常则视为S2休眠
@@ -243,6 +254,8 @@ line level    source
                       else
                       {
                         g_isCommTry = 1;
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 5   
+
                       }
                     }
                   }
@@ -251,75 +264,82 @@ line level    source
                     bTrySend = 0;
                   }
               #endif
- 238   2          pUart_Send_Pro();
- 239   2        }
- 240   1      
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 5   
-
- 241   1        //接收解析数据
- 242   1        if (COM2.RX_TimeOut == 0)
- 243   1        {
- 244   2          if (COM2.RX_Cnt > 0)
- 245   2          {
- 246   3            COM2.B_RX_OK = 1;
- 247   3      
- 248   3            p_appc_proc_data(&RX2_Buffer, COM2.RX_Cnt);
- 249   3      
- 250   3            COM2.RX_Cnt = 0;
- 251   3            COM2.B_RX_OK = 0;
- 252   3          }
- 253   2      
- 254   2        }
- 255   1      }
- 256          /* 从解析数据中获取灯的数据 */
- 257          void LED_Control(u8 iLED_Type, u8 iLED_Value)
- 258          {
- 259   1        switch (iLED_Type)
- 260   1        {
- 261   2        case '1':                         // 报警LED
- 262   2          if (iLED_Value == '0') {        // 熄灭
- 263   3            g_bLedSOS = LED_OFF;
- 264   3      
- 265   3          }
- 266   2          else if (iLED_Value == '1') {     // 常亮
- 267   3            g_bLedSOS = LED_ON;
- 268   3          }
- 269   2          else if (iLED_Value == '2') {     // 快闪
- 270   3            g_bLedSOS = LED_FLASH_FAST;
- 271   3          }
- 272   2          else if (iLED_Value == '3') {     // 慢闪
- 273   3            g_bLedSOS = LED_FLASH;
- 274   3          }
- 275   2          else {
- 276   3      
- 277   3          }
- 278   2          break;
- 279   2        case '2':                         // 运行
- 280   2          if (iLED_Value == '0') {        // 熄灭
- 281   3            g_bLedRun = LED_OFF;
- 282   3          }
- 283   2          else if (iLED_Value == '1') {     // 常亮
- 284   3            g_bLedRun = LED_ON;
+ 249   2          pUart_Send_Pro();
+ 250   2        }
+ 251   1      
+ 252   1        //接收解析数据
+ 253   1        if (COM2.RX_TimeOut == 0)
+ 254   1        {
+ 255   2          if (COM2.RX_Cnt > 0)
+ 256   2          {
+ 257   3          //  COM2.B_RX_OK = 1;
+ 258   3            TX1_send_data(RX2_Buffer, COM2.RX_Cnt);
+ 259   3            //p_appc_proc_data(&RX2_Buffer, COM2.RX_Cnt);
+ 260   3            p_appc_proc_data(&RX2_Buffer, COM2.RX_Cnt);
+ 261   3            // 这里再放一个
+ 262   3            if (uart_sign == 5)
+ 263   3            {
+ 264   4              p_appc_proc_data(&RX2_Buffer, uart_num);
+ 265   4              uart_sign = 0;
+ 266   4            }
+ 267   3            TX1_send_data(RX2_Buffer, COM2.RX_Cnt);
+ 268   3            memset(RX2_Buffer, 0, COM2.RX_Cnt);
+ 269   3            COM2.RX_Cnt = 0;
+ 270   3          //  COM2.B_RX_OK = 0;
+ 271   3            
+ 272   3          }
+ 273   2      
+ 274   2        }
+ 275   1      }
+ 276          /* 从解析数据中获取灯的数据 */
+ 277          void LED_Control(u8 iLED_Type, u8 iLED_Value)
+ 278          {
+ 279   1        switch (iLED_Type)
+ 280   1        {
+ 281   2        case '1':                         // 报警LED
+ 282   2          if (iLED_Value == '0') {        // 熄灭
+ 283   3            g_bLedSOS = LED_OFF;
+ 284   3      
  285   3          }
- 286   2          else if (iLED_Value == '2') {     // 快闪
- 287   3            g_bLedRun = LED_FLASH_FAST;
+ 286   2          else if (iLED_Value == '1') {     // 常亮
+ 287   3            g_bLedSOS = LED_ON;
  288   3          }
- 289   2          else if (iLED_Value == '3') {     // 慢闪
- 290   3            g_bLedRun = LED_FLASH;
+ 289   2          else if (iLED_Value == '2') {     // 快闪
+ 290   3            g_bLedSOS = LED_FLASH_FAST;
  291   3          }
- 292   2          else {
- 293   3      
+ 292   2          else if (iLED_Value == '3') {     // 慢闪
+ 293   3            g_bLedSOS = LED_FLASH;
  294   3          }
- 295   2          break;
- 296   2      #if 0
+ 295   2          else {
+ 296   3      
+ 297   3          }
+ 298   2          break;
+ 299   2        case '2':                         // 运行
+ 300   2          if (iLED_Value == '0') {        // 熄灭
+ 301   3            g_bLedRun = LED_OFF;
+ 302   3          }
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 6   
+
+ 303   2          else if (iLED_Value == '1') {     // 常亮
+ 304   3            g_bLedRun = LED_ON;
+ 305   3          }
+ 306   2          else if (iLED_Value == '2') {     // 快闪
+ 307   3            g_bLedRun = LED_FLASH_FAST;
+ 308   3          }
+ 309   2          else if (iLED_Value == '3') {     // 慢闪
+ 310   3            g_bLedRun = LED_FLASH;
+ 311   3          }
+ 312   2          else {
+ 313   3      
+ 314   3          }
+ 315   2          break;
+ 316   2      #if 0
                 case '3':                         // 充电
                   if (iLED_Value == '0') {        // 熄灭
                     g_bLedLamp = LED_OFF;
                   }
                   else if (iLED_Value == '1') {     // 常亮
                     g_bLedLamp = LED_ON;
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 6   
-
                   }
                   else if (iLED_Value == '2') {     // 快闪
                     g_bLedLamp = LED_FLASH_FAST;
@@ -329,86 +349,91 @@ line level    source
                   }
                   break;
               #endif
- 312   2        default:
- 313   2          break;
- 314   2        }
- 315   1      }
- 316          /* 计算检验数 */
- 317          u8 pSum(u8 *bData, u8 bLen)
- 318          {
- 319   1        u8 i, bTemp;
- 320   1      
- 321   1        bTemp = 0;
- 322   1      
- 323   1        for (i = 0; i < bLen - 1; i++)
- 324   1        {
- 325   2          bTemp += bData[i];
- 326   2        }
- 327   1      
- 328   1        bTemp = ~bTemp;
- 329   1      
- 330   1        return bTemp;
- 331   1      }
- 332          /* 接收数据的返还值 */
- 333          void pUartReturn(u8 *bData, u8 bLen)
- 334          {
- 335   1        u8 xdata bRTxBuf[20];
- 336   1        memcpy(bRTxBuf, bData, bLen);
- 337   1        bRTxBuf[3] |= 0x80;   // 功能高位置1
- 338   1        //bRTxBuf[4] |= 0x80;   
- 339   1        bRTxBuf[4] &= 0x0f;   // 功能高位置0
- 340   1        bRTxBuf[bLen - 1] = pSum(bRTxBuf, bLen);
- 341   1        TX2_send_data(bRTxBuf, bLen);
+ 332   2        default:
+ 333   2          break;
+ 334   2        }
+ 335   1      }
+ 336          /* 计算检验数 */
+ 337          u8 pSum(u8 *bData, u8 bLen)
+ 338          {
+ 339   1        u8 i, bTemp;
+ 340   1      
+ 341   1        bTemp = 0;
  342   1      
- 343   1      }
- 344          /* 解析模块数据 */
- 345          void p_appc_proc_data(u8 *bData, u8 bLength)
- 346          {
- 347   1        u8 i;
- 348   1        u8 bLen;
- 349   1        //校验头
- 350   1        if ((bData[0] != 0xff) || (bData[1] != 0xaa))
- 351   1        {
- 352   2          return;
- 353   2        }
- 354   1      
- 355   1        //校验长度
- 356   1        bLen = bData[5] + 7;
- 357   1        if (bLen > bLength)
- 358   1        {
- 359   2          return;
- 360   2        }
- 361   1        //校验
- 362   1        if (bData[bLen - 1] != pSum(bData, bLen))
- 363   1        {
- 364   2          return;
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 7   
+ 343   1        for (i = 0; i < bLen - 1; i++)
+ 344   1        {
+ 345   2          bTemp += bData[i];
+ 346   2        }
+ 347   1      
+ 348   1        bTemp = ~bTemp;
+ 349   1      
+ 350   1        return bTemp;
+ 351   1      }
+ 352          /* 接收数据的返还值 */
+ 353          void pUartReturn(u8 *bData, u8 bLen)
+ 354          {
+ 355   1        u8 xdata bRTxBuf[20];
+ 356   1        memcpy(bRTxBuf, bData, bLen);
+ 357   1        bRTxBuf[3] |= 0x80;   // 返回高位置1
+ 358   1        bRTxBuf[4] |= 0x80;   // 功能高位置1
+ 359   1        //bRTxBuf[4] &= 0x0f;   // 功能高位置0
+ 360   1        bRTxBuf[bLen - 1] = pSum(bRTxBuf, bLen);
+ 361   1        TX2_send_data(bRTxBuf, bLen);
+ 362   1      
+ 363   1      }
+ 364          /* 解析模块数据 */
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 7   
 
- 365   2        }
- 366   1      
- 367   1        g_isCommErr = 0;      //通讯正常
- 368   1        g_bCommErrTimeOut01s = 0;
- 369   1        switch (bData[4])
- 370   1        {
- 371   2          
- 372   2          /* 回复(发送心跳和按键的回复值) */
- 373   2        case 0x81:
- 374   2        case 0x82:
- 375   2        /* 充电状态的回复 */
- 376   2        case 0x83:
- 377   2          if (bData[2] == g_bSendNum)
- 378   2          {
- 379   3            g_isCommErr = 0;    //通讯OK
- 380   3            g_isCommWait = 0;
- 381   3            g_isCommTry = 0;
- 382   3            //g_bPowerUpTimeOut1s = 0;
- 383   3            //PrintString1("Rcv Ok\r\n");
- 384   3          }
- 385   2          break;
- 386   2          
- 387   2            /*  解析  */
- 388   2          //功放控制
- 389   2      #if 0   
+ 365          void p_appc_proc_data(u8 *bData, u8 bLength)
+ 366          {
+ 367   1        u8 i;
+ 368   1        u8 bLen;
+ 369   1        //TX1_send_data(bData, bLength);
+ 370   1        //校验头
+ 371   1        if ((bData[0] != 0xff) || (bData[1] != 0xaa))
+ 372   1        {
+ 373   2          return;
+ 374   2        }
+ 375   1        //PrintString1("OK2\r\n");
+ 376   1        TX1_write2buff(0xaa);
+ 377   1        //校验长度
+ 378   1        bLen = bData[5] + 7;
+ 379   1        if (bLen > bLength)
+ 380   1        {
+ 381   2          return;
+ 382   2        }
+ 383   1        //PrintString1("OK4\r\n");
+ 384   1        TX1_write2buff(0xbb);
+ 385   1        //校验
+ 386   1        if (bData[bLen - 1] != pSum(bData, bLen))
+ 387   1        {
+ 388   2          return;
+ 389   2        }
+ 390   1        //PrintString1("OK3\r\n");
+ 391   1        TX1_write2buff(0xcc);
+ 392   1        g_isCommErr = 0;      //通讯正常
+ 393   1        g_bCommErrTimeOut01s = 0;
+ 394   1        switch (bData[4])
+ 395   1        {
+ 396   2          
+ 397   2          /* 回复(发送心跳和按键的回复值) */
+ 398   2        case 0x81:
+ 399   2        case 0x82:
+ 400   2        /* 充电状态的回复 */
+ 401   2        case 0x83:
+ 402   2          if (bData[2] == g_bSendNum)
+ 403   2          {
+ 404   3            g_isCommErr = 0;    //通讯OK
+ 405   3            g_isCommWait = 0;
+ 406   3            g_isCommTry = 0;
+ 407   3            //g_bPowerUpTimeOut1s = 0;
+ 408   3            //PrintString1("Rcv Ok\r\n");
+ 409   3          }
+ 410   2          break;
+ 411   2          
+ 412   2            /*  解析  */
+ 413   2          //功放控制
+ 414   2      #if 0   
                 case 0x04:
                   if (bData[6] == 0)
                   {
@@ -421,33 +446,35 @@ line level    source
                     PrintString1("AP1\r\n");
                   }
                   //回复
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 8   
+
                   pUartReturn(bData, bLen);
                   break;
               #endif
- 405   2          //灯控制
- 406   2        //case 0x05:
- 407   2        case 0x06:
- 408   2          //PrintString1("LED Ctrl");
- 409   2          for (i = 0; i < 3; i++)
- 410   2          {
- 411   3            //TX1_write2buff(bData[6 + i] + '0');
- 412   3            LED_Control(i + '1', bData[6 + i] + '0');
- 413   3          }
- 414   2          //PrintString1("\r\n");
- 415   2          g_isLedBak = 0;
- 416   2          // 回复
- 417   2          pUartReturn(bData, bLen);
- 418   2          break;
- 419   2          //电源控制
- 420   2      #if 0
+ 430   2          //灯控制
+ 431   2        //case 0x05:
+ 432   2        case 0x06:
+ 433   2          PrintString1("OK5\r\n");
+ 434   2          //PrintString1("LED Ctrl");
+ 435   2          // 设置两个灯的状态
+ 436   2          for (i = 0; i < 2; i++)
+ 437   2          {
+ 438   3            //TX1_write2buff(bData[6 + i] + '0');
+ 439   3            LED_Control(i + '1', bData[6 + i] + '0');
+ 440   3          }
+ 441   2          //PrintString1("\r\n");
+ 442   2          g_isLedBak = 0;
+ 443   2          // 回复
+ 444   2          pUartReturn(bData, bLen);
+ 445   2          break;
+ 446   2          //电源控制
+ 447   2      #if 0
                 case 0x06:
                   if (bData[6] == 1)
                   {
                     PrintString1("PWR1\r\n");
                     //重上电
                     g_isS2Reset = 1;
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 8   
-
                   }
                   else if (bData[6] == 2)
                   {
@@ -459,30 +486,39 @@ line level    source
                   pUartReturn(bData, bLen);
                   break;
               #endif 
- 438   2          // 熄屏
- 439   2        case 0x07:
- 440   2          g_isS2Sleep = 1;
- 441   2          //g_isS2CommSleep = 1;
- 442   2          //PrintString1("ComSleep\r\n");
- 443   2          // 回复
- 444   2          pUartReturn(bData, bLen);
- 445   2          break;
- 446   2          // 亮屏
- 447   2        case 0x08:
- 448   2          g_isS2Sleep = 0;
- 449   2          //g_isS2CommSleep = 0;
- 450   2          //PrintString1("ComWake\r\n");
- 451   2          // 回复
- 452   2          pUartReturn(bData, bLen);
- 453   2          break;
- 454   2        default:
- 455   2          break;
- 456   2        }
- 457   1      }
- 458          /* 发送给模块数据 */
- 459          void pUart_Send_Pro(void)
- 460          {
- 461   1      #if 0
+ 465   2          // 熄屏
+ 466   2        case 0x07:
+ 467   2          /* 设备进入睡眠并将灯关闭和设备通讯关闭 */
+ 468   2          g_isS2Sleep = 1; 
+ 469   2          g_isCommErr = 1;
+ 470   2          // 灯全亮
+ 471   2          // 回复
+ 472   2          pUartReturn(bData, bLen);
+ 473   2          memset(RX2_Buffer, 0x00, bLen);
+ 474   2          if (bLength > bLen)
+ 475   2          {
+ 476   3            memcpy(&RX2_Buffer[0], &RX2_Buffer[bLen], bLength - bLen);
+ 477   3            uart_num = bLength - bLen;
+ 478   3            uart_sign = 5;
+ 479   3          }
+ 480   2      
+ 481   2          break;
+ 482   2          // 亮屏
+ 483   2        case 0x08:
+ 484   2          g_isS2Sleep = 0;
+ 485   2          // 回复
+ 486   2          pUartReturn(bData, bLen);
+ 487   2          break;
+ 488   2        default:
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 9   
+
+ 489   2          break;
+ 490   2        }
+ 491   1      }
+ 492          /* 发送给模块数据 */
+ 493          void pUart_Send_Pro(void)
+ 494          {
+ 495   1      #if 0
                 if (g_isCommTry)
                 {
                   if ((bTxBuf[4] != 0x01))
@@ -505,17 +541,15 @@ line level    source
                   g_isCommWait = 1;     //等待回复
                 }
               #endif
- 484   1        if (g_isCommTry)
- 485   1        {
- 486   2      
- 487   2        }
- 488   1      
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 9   
-
- 489   1        //有按键则发按键  --- 按键信息
- 490   1        else if ((g_bKey[0] != 0) && (g_bKey[0] != 0x86))
- 491   1        {
- 492   2      #if 0
+ 518   1        if (g_isCommTry)
+ 519   1        {
+ 520   2      
+ 521   2        }
+ 522   1      
+ 523   1        //有按键则发按键  --- 按键信息
+ 524   1        else if ((g_bKey[0] != 0) && (g_bKey[0] != 0x86))
+ 525   1        {
+ 526   2      #if 0
                   // 这里是在获取设备息屏时将设备进行开机进行设备通讯
                   if (g_isS2CommSleep&&g_isCommErr)
                   {
@@ -526,39 +560,41 @@ line level    source
                     Delay_nms(100);
                   }
               #endif
- 503   2          g_bSendNum++;
- 504   2          bTxBuf[0] = 0xff;
- 505   2          bTxBuf[1] = 0xaa;
- 506   2          bTxBuf[2] = g_bSendNum;
- 507   2          bTxBuf[3] = 0x01;
- 508   2          bTxBuf[4] = 0x02;             // 按键功能
- 509   2          bTxBuf[5] = 2;                  // 命令长度
- 510   2          bTxBuf[6] = g_bKey[0] & 0x0f;   // 具体的功能（哪个按键和按键）
- 511   2          if ((g_bKey[0] & 0x80) != 0)
- 512   2          {
- 513   3            bTxBuf[7] = 2;
- 514   3          }
- 515   2          else
- 516   2          {
- 517   3            bTxBuf[7] = 1;
- 518   3          }
- 519   2          bTxLen = bTxBuf[5] + 7;
- 520   2          bTxBuf[8] = pSum(bTxBuf, bTxLen);// 校验位
- 521   2          TX2_send_data(bTxBuf, bTxLen);
- 522   2          COM2.TX_TimeOut = 50;        // 1s超时回复
- 523   2          g_isCommWait = 1;            // 等待回复
- 524   2          //清除按键
- 525   2          if (g_bKey[1] != 0)
- 526   2          {
- 527   3            g_bKey[0] = g_bKey[1];
- 528   3            g_bKey[1] = 0;
- 529   3          }
- 530   2          else
- 531   2          {
- 532   3            g_bKey[0] = 0;
- 533   3          }
- 534   2        }
- 535   1      #if 0
+ 537   2          g_bSendNum++;
+ 538   2          bTxBuf[0] = 0xff;
+ 539   2          bTxBuf[1] = 0xaa;
+ 540   2          bTxBuf[2] = g_bSendNum;
+ 541   2          bTxBuf[3] = 0x01;
+ 542   2          bTxBuf[4] = 0x02;             // 按键功能
+ 543   2          bTxBuf[5] = 2;                  // 命令长度
+ 544   2          bTxBuf[6] = g_bKey[0] & 0x0f;   // 具体的功能（哪个按键和按键）
+ 545   2          if ((g_bKey[0] & 0x80) != 0)
+ 546   2          {
+ 547   3            bTxBuf[7] = 2;
+ 548   3          }
+ 549   2          else
+ 550   2          {
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 10  
+
+ 551   3            bTxBuf[7] = 1;
+ 552   3          }
+ 553   2          bTxLen = bTxBuf[5] + 7;
+ 554   2          bTxBuf[8] = pSum(bTxBuf, bTxLen);// 校验位
+ 555   2          TX2_send_data(bTxBuf, bTxLen);
+ 556   2          COM2.TX_TimeOut = 50;        // 1s超时回复
+ 557   2          g_isCommWait = 1;            // 等待回复
+ 558   2          //清除按键
+ 559   2          if (g_bKey[1] != 0)
+ 560   2          {
+ 561   3            g_bKey[0] = g_bKey[1];
+ 562   3            g_bKey[1] = 0;
+ 563   3          }
+ 564   2          else
+ 565   2          {
+ 566   3            g_bKey[0] = 0;
+ 567   3          }
+ 568   2        }
+ 569   1      #if 0
                 //交流电
                 else if (g_bPower != 0)
                 {
@@ -574,8 +610,6 @@ line level    source
                   g_bSendNum++;
                   bTxBuf[0] = 0xff;
                   bTxBuf[1] = 0xaa;
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 10  
-
                   bTxBuf[2] = g_bSendNum;
                   bTxBuf[3] = 0x01;
                   bTxBuf[4] = 0x03; //cmd
@@ -591,22 +625,24 @@ line level    source
                   g_bPower = 0;
                 }
               #endif
- 566   1      
- 567   1        //定时发送  --- 心跳包
- 568   1        else if ((g_bPlusTimeOut1s == 0)/*||(g_isCommErr)*/)
- 569   1        {
- 570   2          // 设备未睡眠 --- 一直发送心跳包
- 571   2          if (g_isS2Sleep == 0) 
- 572   2          {
- 573   3            g_bSendNum++;
- 574   3            //PrintString1("Send Plus\r\n");
- 575   3      #if 0
+ 600   1      
+ 601   1        //定时发送  --- 心跳包
+ 602   1        else if ((g_bPlusTimeOut1s == 0)/*||(g_isCommErr)*/)
+ 603   1        {
+ 604   2          // 设备未睡眠 --- 一直发送心跳包
+ 605   2          if (g_isS2Sleep == 0) 
+ 606   2          {
+ 607   3            g_bSendNum++;
+ 608   3            //PrintString1("Send Plus\r\n");
+ 609   3      #if 0
                     if (g_bPowerUpTimeOut1s > 0)
                     {
                       g_bPlusTimeOut1s = 2;
+C51 COMPILER V9.54   USART                                                                 04/24/2020 14:22:12 PAGE 11  
+
                     }
               #endif
- 581   3      #if 0
+ 615   3      #if 0
                     //else if (g_isCommErr)
                     if (g_isCommErr)
                     {
@@ -617,39 +653,37 @@ line level    source
                       g_bPlusTimeOut1s = 2;
                     }
               #endif
- 592   3            g_bPlusTimeOut1s = 200;
- 593   3      
- 594   3            bTxBuf[0] = 0xff;
- 595   3            bTxBuf[1] = 0xaa;
- 596   3            bTxBuf[2] = g_bSendNum;
- 597   3            bTxBuf[3] = 0x01;
- 598   3            bTxBuf[4] = 0x01; //cmd
- 599   3            bTxBuf[5] = 0;
- 600   3      
- 601   3            bTxLen = bTxBuf[5] + 7;
- 602   3            bTxBuf[6] = pSum(bTxBuf, bTxLen);
- 603   3            TX2_send_data(bTxBuf, bTxLen);
- 604   3            COM2.TX_TimeOut = 50;
- 605   3            g_isCommWait = 1;   //等待回复
- 606   3          }
- 607   2          
- 608   2          }
- 609   1      
- 610   1      }
- 611          
- 612          
-C51 COMPILER V9.54   USART                                                                 04/22/2020 20:43:43 PAGE 11  
-
- 613          
- 614          
+ 626   3            g_bPlusTimeOut1s = 120;
+ 627   3      
+ 628   3            bTxBuf[0] = 0xff;
+ 629   3            bTxBuf[1] = 0xaa;
+ 630   3            bTxBuf[2] = g_bSendNum;
+ 631   3            bTxBuf[3] = 0x01;
+ 632   3            bTxBuf[4] = 0x01; //cmd
+ 633   3            bTxBuf[5] = 0;
+ 634   3      
+ 635   3            bTxLen = bTxBuf[5] + 7;
+ 636   3            bTxBuf[6] = pSum(bTxBuf, bTxLen);
+ 637   3            TX2_send_data(bTxBuf, bTxLen);
+ 638   3            COM2.TX_TimeOut = 50;
+ 639   3            g_isCommWait = 1;   //等待回复
+ 640   3          }
+ 641   2          
+ 642   2          }
+ 643   1      
+ 644   1      }
+ 645          
+ 646          
+ 647          
+ 648          
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =   1000    ----
-   CONSTANT SIZE    =   ----    ----
-   XDATA SIZE       =    132      20
+   CODE SIZE        =   1515    ----
+   CONSTANT SIZE    =      6    ----
+   XDATA SIZE       =    293      20
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =      2      16
+   DATA SIZE        =      4      24
    IDATA SIZE       =   ----    ----
    BIT SIZE         =      3    ----
 END OF MODULE INFORMATION.

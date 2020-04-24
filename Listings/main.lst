@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   MAIN                                                                  04/22/2020 20:43:42 PAGE 1   
+C51 COMPILER V9.54   MAIN                                                                  04/24/2020 14:22:11 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
@@ -16,96 +16,74 @@ line level    source
    6            2.使用串口1--打印   使用串口2--通讯   波特率9600
    7            3.使用定时器0 --- 1MS中断
    8          
-   9            修改了接收返回值的字节置1或者0
+   9          */
   10          
-  11            4.通信协议目前主要时接收和发送是一体的
-  12          */
-  13          
-  14          sbit usb_boot = P1 ^ 7;
-  15          sbit mcu_pkey = P1 ^ 6;
-  16          sbit c_lte = P3 ^ 5;
-  17          
-  18          /*全局变量定义*/
-  19          volatile uint8_t iEvent_Flag = 0;         /* 系统标志位 */
-  20          //volatile uint8 wWdog_1S_Timer = 0;
-  21          uint8_t iWdog_S = 0;
-  22          bit bAC_In = 0, bDect_Chg = 0;
-  23          u8  iDect_AC_Count = 0;
-  24          u8  iDect_Bat_Count = 0;
-  25          
-  26          /*静态变量定义*/
-  27          static uint8_t iTimer_Counter1 = 0;         // 100ms计时
-  28          static uint8_t iTimer_Counter2 = 0;       // 1s计时
+  11          
+  12          /*全局变量定义*/
+  13          volatile uint8_t iEvent_Flag = 0;         /* 系统标志位 */
+  14          //volatile uint8 wWdog_1S_Timer = 0;
+  15          uint8_t iWdog_S = 0;
+  16          bit bAC_In = 0, bDect_Chg = 0;
+  17          u8  iDect_AC_Count = 0;
+  18          u8  iDect_Bat_Count = 0;
+  19          
+  20          /*静态变量定义*/
+  21          static uint8_t iTimer_Counter1 = 0;         // 100ms计时
+  22          static uint8_t iTimer_Counter2 = 0;       // 1s计时
+  23          
+  24          u8  g_bPlusTimeOut1s;
+  25          u8  g_bSleepTimeOut1s;
+  26          u8  bFreeTimeOut1s;
+  27          bit g_isS2Sleep;
+  28          bit g_isS2On, g_isS2Off, g_isS2Reset;
   29          
-  30          u8  g_bPlusTimeOut1s;
-  31          u8  g_bSleepTimeOut1s;
-  32          u8  bFreeTimeOut1s;
-  33          bit g_isS2Sleep;
-  34          bit g_isS2On, g_isS2Off, g_isS2Reset;
-  35          
-  36          
-  37          
-  38          //开机参数
-  39          void ResetPara(void)
-  40          {
-  41   1        /* 通信和是否睡眠 */
-  42   1        g_isCommErr = 1;   // 不通信
-  43   1        g_isS2Sleep = 0;   // 不睡眠
-  44   1        /*  */
-  45   1        bFreeTimeOut1s = 5;
-  46   1        g_bPlusTimeOut1s = 200;
-  47   1        /* 按键值初始化 */
-  48   1        g_bKey[0] = 0;
-  49   1        g_bKey[1] = 0;
-  50   1      }
-  51          
-  52          
-  53          
-  54          /*主函数*/
-C51 COMPILER V9.54   MAIN                                                                  04/22/2020 20:43:42 PAGE 2   
+  30          
+  31          
+  32          
+  33          /*主函数*/
+  34          void main(void)
+  35          {
+  36   1      
+  37   1        //  将下载IO进行拉低
+  38   1        usb_boot = 0;
+  39   1        // 将唤醒口拉高
+  40   1        P3M1 |= (1 << 7);
+  41   1        P3M0 &= ~(1 << 7);
+  42   1        //wack_up = 1;
+  43   1        // MCU初始化            
+  44   1        disableExtiInterrupts();
+  45   1        p_sysclk_init();
+  46   1        p_timer_init();
+  47   1        p_uart1_init();
+  48   1        p_uart2_init();
+  49   1        //IO_Init();   --- 都是准双向故暂时不用
+  50   1        //INT0_Init();
+  51   1        enableExtiInterrupts();
+  52   1        /* 开启模块并下载 */
+  53   1        mcu_pkey = 0;
+  54   1        c_lte = 0;
+C51 COMPILER V9.54   MAIN                                                                  04/24/2020 14:22:11 PAGE 2   
 
-  55          void main(void)
-  56          {
-  57   1      
-  58   1        //  将下载IO进行拉低
+  55   1        Delay_100ms(40);
+  56   1        // 下载口设置为开漏输出(准备下载)
+  57   1        P1M1 |= (1 << 7);
+  58   1        P1M0 |= (1 << 7);
   59   1        usb_boot = 0;
-  60   1        // MCU初始化            
-  61   1        disableExtiInterrupts();
-  62   1        p_sysclk_init();
-  63   1        p_timer_init();
-  64   1        //p_uart1_init();
-  65   1        p_uart2_init();
-  66   1        //IO_Init();   --- 都是准双向故暂时不用
-  67   1        //INT0_Init();
-  68   1        enableExtiInterrupts();
-  69   1        /* 开启模块并下载 */
-  70   1        mcu_pkey = 0;
-  71   1        c_lte = 0;
-  72   1        Delay_100ms(40);
-  73   1        // 下载口设置为开漏输出
-  74   1      //  PORT_MODE_SET(1, 7, PORT_MODE_HZ);
-  75   1      //#if 0
-  76   1        P1M1 |= (1 << 7);
-  77   1        P1M0 |= (1 << 7);
-  78   1        usb_boot = 0;
-  79   1        Delay_100ms(40);
-  80   1      //#endif
-  81   1        /**************************************************/
-  82   1        //g_bPower = 0;
-  83   1        g_isS2On = 1;
-  84   1        // 开机参数配置
-  85   1        ResetPara();
-  86   1      
-  87   1        while (1)
-  88   1        {
-  89   2      
-  90   2          //按键5秒抛掉
-  91   2          if ((bKeyTimeOut1s == 0) && ((g_bKey[0] != 0) || (g_bKey[1] != 0)))
-  92   2          {
-  93   3            g_bKey[0] = 0;
-  94   3            g_bKey[1] = 0;
-  95   3          }
-  96   2      #if 0
+  60   1        Delay_100ms(40);
+  61   1        /**************************************************/
+  62   1        g_isS2On = 1;
+  63   1        // 开机参数配置
+  64   1        ResetPara();
+  65   1        while (1)
+  66   1        {
+  67   2      
+  68   2          //按键5秒抛掉
+  69   2          if ((bKeyTimeOut1s == 0) && ((g_bKey[0] != 0) || (g_bKey[1] != 0)))
+  70   2          {
+  71   3            g_bKey[0] = 0;
+  72   3            g_bKey[1] = 0;
+  73   3          }
+  74   2      #if 0
                   // 关机  进入休眠事件（按键唤醒模式和定时唤醒）
                   // 直接进行关机   --- 一开始不进入关机
                   if (g_isS2Sleep)
@@ -126,8 +104,6 @@ line level    source
                     //正常休眠（无按键5秒）：定时唤醒（如何接收指示灯？ 如何控制指示灯？）
                     while (g_bSleepTimeOut1s == 0)
                     {
-C51 COMPILER V9.54   MAIN                                                                  04/22/2020 20:43:42 PAGE 3   
-
                       EX0 = 1;        // 打开外部中断
                       PCON = 0x02;            // 进入休眠模式 （VOCTRL = 0x00;）这个则是默认故可以不写 
                       _nop_();
@@ -139,63 +115,51 @@ line level    source
                     // IO口初始化
                   }
               #endif
- 128   2      #if 0
-                  if (sign_date == 5)
-                  {
-                    P1M1 |= (1 << 7);
-                    P1M0 |= (1 << 7);
-                    usb_boot = ~usb_boot;
-                    IO_LED_SOS = ~IO_LED_SOS;
-                    sign_date = 0;
-                  }
+ 106   2      
+ 107   2      #if 0
+                    if ((g_bKey[0] == 0x86) || (g_bKey[1] == 0x86))
+                    {
+                      g_isS2Off = 1;
+                      g_bKey[0] = 0;
+                      g_bKey[1] = 0;
+                    }
               #endif
- 138   2      
- 139   2      
- 140   2          // 关机和运行 --- 没有执行任务则是睡眠
- 141   2          //else
- 142   2          //if (g_isS2Sleep == 1)   // 这里修改了
- 143   2          //if (g_isS2Sleep == 0)
- 144   2          //{
- 145   2            if ((g_bKey[0] == 0x86) || (g_bKey[1] == 0x86))
- 146   2            {
- 147   3              g_isS2Off = 1;
- 148   3              g_bKey[0] = 0;
- 149   3              g_bKey[1] = 0;
- 150   3            }
- 151   2        
- 152   2            //MCU_IDLE();
- 153   2            //没有任务则休眠
- 154   2            //休眠：100ms定时唤醒执行LED
- 155   2            if (pSleepAble())
- 156   2            {
- 157   3              static u8 iSleep_Cnt;
- 158   3      
- 159   3              WakeTimerSet(160);      // 100ms（掉电定时器）
- 160   3              PCON = 0x02;
- 161   3              _nop_();
- 162   3              _nop_();
- 163   3              _nop_();
- 164   3              _nop_();
- 165   3      
- 166   3              isFlashFast = !isFlashFast;   //计时
- 167   3              iSleep_Cnt++;
- 168   3              if (iSleep_Cnt >= 10)
- 169   3              {
- 170   4                iSleep_Cnt = 0;
- 171   4                isFlash = !isFlash;
- 172   4      
- 173   4                if (g_bPlusTimeOut1s > 0)
- 174   4                {
- 175   5                  g_bPlusTimeOut1s--;
- 176   5                }
- 177   4              }
- 178   3      
-C51 COMPILER V9.54   MAIN                                                                  04/22/2020 20:43:42 PAGE 4   
+ 115   2      #if 0
+                    //MCU_IDLE();
+C51 COMPILER V9.54   MAIN                                                                  04/24/2020 14:22:11 PAGE 3   
 
- 179   3              //  WDT_CONTR |= WDT_CLR;
- 180   3              //  iEvent_Flag |= EVENT_TIMER_100MS;
- 181   3            }
- 182   2      #if 0
+                    //没有任务则休眠
+                    //休眠：100ms定时唤醒执行LED
+                    if (pSleepAble())
+                    {
+                      static u8 iSleep_Cnt;
+              
+                      WakeTimerSet(160);      // 100ms（掉电定时器）
+                      PCON = 0x02;
+                      _nop_();
+                      _nop_();
+                      _nop_();
+                      _nop_();
+              
+                      isFlashFast = !isFlashFast;   //计时
+                      iSleep_Cnt++;
+                      if (iSleep_Cnt >= 10)
+                      {
+                        iSleep_Cnt = 0;
+                        isFlash = !isFlash;
+              
+                        if (g_bPlusTimeOut1s > 0)
+                        {
+                          g_bPlusTimeOut1s--;
+                        }
+                      }
+              
+                      //  WDT_CONTR |= WDT_CLR;
+                      //  iEvent_Flag |= EVENT_TIMER_100MS;
+                    }
+              #endif
+ 147   2      
+ 148   2      #if 0
                     //20毫秒定时处理  
                     if (iEvent_Flag & EVENT_TIMER_100MS)
                     {
@@ -226,82 +190,87 @@ line level    source
               
                           //  PrintString1("ComErr TimeOut\r\n");
                         }
+C51 COMPILER V9.54   MAIN                                                                  04/24/2020 14:22:11 PAGE 4   
+
                       }
                     }
               #endif
- 216   2            /* 接收发送 */
- 217   2            pUart_Pro();
- 218   2          //}
- 219   2        }
- 220   1      }
- 221          
- 222          
- 223          
- 224          
- 225          /* 定时器0 时间戳  --- 1MS */
- 226          void TM0_Isr() interrupt 1 using 3
- 227          {
- 228   1      
- 229   1        static u8 bCnt;
- 230   1        bCnt++;
- 231   1        ++g_time_ms;
- 232   1        if (COM2.RX_TimeOut > 0)
- 233   1        {
- 234   2          COM2.RX_TimeOut--;
- 235   2        }
- 236   1      //  if (COM1.RX_TimeOut > 0)
- 237   1      //  {
- 238   1      //    COM1.RX_TimeOut--;
- 239   1      //  }
- 240   1      
-C51 COMPILER V9.54   MAIN                                                                  04/22/2020 20:43:42 PAGE 5   
+ 182   2            /* 接收发送 */
+ 183   2            pUart_Pro();
+ 184   2          //}
+ 185   2        }
+ 186   1      }
+ 187          
+ 188          
+ 189          
+ 190          
+ 191          /* 定时器0 时间戳  --- 1MS */
+ 192          void TM0_Isr() interrupt 1 using 3
+ 193          {
+ 194   1      
+ 195   1        static u8 bCnt;
+ 196   1        bCnt++;
+ 197   1        ++g_time_ms;
+ 198   1        if (COM2.RX_TimeOut > 0)
+ 199   1        {
+ 200   2          COM2.RX_TimeOut--;
+ 201   2        }
+ 202   1      //  if (COM1.RX_TimeOut > 0)
+ 203   1      //  {
+ 204   1      //    COM1.RX_TimeOut--;
+ 205   1      //  }
+ 206   1      
+ 207   1        if (bCnt >= 20)  //  --- 20ms
+ 208   1        {
+ 209   2          bCnt = 0;
+ 210   2          /* 扫描哪个按键按下和时间的长度 */
+ 211   2          pAddKey(0, KEY1 == 0);
+ 212   2          pAddKey(1, KEY2 == 0);
+ 213   2          if (COM2.TX_TimeOut > 0)
+ 214   2          {
+ 215   3            COM2.TX_TimeOut--;
+ 216   3          }
+ 217   2      
+ 218   2          // 100毫秒计时
+ 219   2          iTimer_Counter1++;
+ 220   2          if (iTimer_Counter1 >= 5)   // 100毫秒  1*20*5
+ 221   2          {
+ 222   3            iTimer_Counter1 = 0;
+ 223   3      
+ 224   3            //iEvent_Flag |= EVENT_TIMER_100MS;
+ 225   3      
+ 226   3            isFlashFast = !isFlashFast;     //快闪
+ 227   3            
+ 228   3            iTimer_Counter2++;
+ 229   3            if (iTimer_Counter2 >= 10)   // 1秒计时   100*10
+ 230   3            {
+ 231   4              iTimer_Counter2 = 0;
+ 232   4      
+ 233   4              isFlash = !isFlash;         //慢闪  
+ 234   4              /**********************************************/
+ 235   4              // 查询是否有按键按下
+ 236   4              if (bFreeTimeOut1s > 0)
+ 237   4              {
+ 238   5                bFreeTimeOut1s--;
+ 239   5              }
+ 240   4              // 心跳包的延时
+C51 COMPILER V9.54   MAIN                                                                  04/24/2020 14:22:11 PAGE 5   
 
- 241   1        if (bCnt >= 20)  //  --- 20ms
- 242   1        {
- 243   2          bCnt = 0;
- 244   2          /* 扫描哪个按键按下和时间的长度 */
- 245   2          pAddKey(0, KEY1 == 0);
- 246   2          pAddKey(1, KEY2 == 0);
- 247   2          if (COM2.TX_TimeOut > 0)
- 248   2          {
- 249   3            COM2.TX_TimeOut--;
- 250   3          }
- 251   2      
- 252   2          // 100毫秒计时
- 253   2          iTimer_Counter1++;
- 254   2          if (iTimer_Counter1 >= 5)   // 100毫秒  1*20*5
- 255   2          {
- 256   3            iTimer_Counter1 = 0;
- 257   3      
- 258   3            iEvent_Flag |= EVENT_TIMER_100MS;
- 259   3      
- 260   3            isFlashFast = !isFlashFast;     //快闪
- 261   3      
- 262   3            // 1秒计时   100*10
- 263   3            iTimer_Counter2++;
- 264   3            if (iTimer_Counter2 >= 10)
- 265   3            {
- 266   4              iTimer_Counter2 = 0;
- 267   4      
- 268   4              isFlash = !isFlash;         //慢闪  
- 269   4              /**********************************************/
- 270   4              // 查询是否有按键按下
- 271   4              if (bFreeTimeOut1s > 0)
- 272   4              {
- 273   5                bFreeTimeOut1s--;
- 274   5              }
- 275   4              // 心跳包的延时
- 276   4              if (g_bPlusTimeOut1s > 0)
- 277   4              {
- 278   5                g_bPlusTimeOut1s--;
- 279   5              }
- 280   4              // 暂时不用(可以作为超时的判断)
- 281   4              if (g_bSleepTimeOut1s > 0)
- 282   4              {
- 283   5                bFreeTimeOut1s = 5;
- 284   5                g_bSleepTimeOut1s--;
- 285   5              }
- 286   4      #if 0
+ 241   4              if (g_bPlusTimeOut1s > 0)
+ 242   4              {
+ 243   5                g_bPlusTimeOut1s--;
+ 244   5              }
+ 245   4      
+ 246   4      
+ 247   4              // 暂时不用(可以作为超时的判断)
+ 248   4              if (g_bSleepTimeOut1s > 0)
+ 249   4              {
+ 250   5                bFreeTimeOut1s = 5;
+ 251   5                g_bSleepTimeOut1s--;
+ 252   5              }
+ 253   4      
+ 254   4      
+ 255   4      #if 0
                       if (g_bPowerUpTimeOut1s > 0)
                       {
                         bFreeTimeOut1s = 5;
@@ -314,37 +283,35 @@ line level    source
                         g_bPowerDownTimeOut1s--;
                       }
               #endif
- 299   4              // 测试按键长按和短按
- 300   4              if (bKeyTimeOut1s > 0)
- 301   4              {
- 302   5                bKeyTimeOut1s--;
-C51 COMPILER V9.54   MAIN                                                                  04/22/2020 20:43:42 PAGE 6   
-
- 303   5              }
- 304   4              /**************************************************/
- 305   4      
- 306   4            }
- 307   3          }
- 308   2          LED_pro();    // 20MS查询一次灯
- 309   2        }
- 310   1      
- 311   1      }
- 312          
- 313          
- 314          
- 315          
- 316          
- 317          
- 318          
- 319          
+ 268   4              // 测试按键长按和短按
+ 269   4              if (bKeyTimeOut1s > 0)
+ 270   4              {
+ 271   5                bKeyTimeOut1s--;
+ 272   5              }
+ 273   4              /**************************************************/
+ 274   4      
+ 275   4            }
+ 276   3          }
+ 277   2          LED_pro();    // 20MS查询一次灯
+ 278   2        }
+ 279   1      
+ 280   1      }
+ 281          
+ 282          
+ 283          
+ 284          
+ 285          
+ 286          
+ 287          
+ 288          
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    343    ----
+   CODE SIZE        =    266    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =     11    ----
+   DATA SIZE        =     10    ----
    IDATA SIZE       =   ----    ----
    BIT SIZE         =      6    ----
 END OF MODULE INFORMATION.
